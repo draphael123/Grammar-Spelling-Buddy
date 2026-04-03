@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      width: 300px;
+      background: #FFFFFF;
+      color: #1E293B;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #4F46E5, #7C3AED);
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-icon {
+      width: 32px; height: 32px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 18px; font-weight: 700;
+    }
+    .header h1 {
+      color: #fff; font-size: 14px; font-weight: 700;
+    }
+    .header p {
+      color: rgba(255,255,255,0.7); font-size: 11px;
+    }
+
+    .status-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 18px;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .status-bar .label {
+      font-size: 13px; font-weight: 500; color: #64748B;
+    }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 44px; height: 24px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle .slider {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: #CBD5E1; border-radius: 12px; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle .slider::before {
+      content: '';
+      position: absolute; top: 2px; left: 2px;
+      width: 20px; height: 20px; background: #fff;
+      border-radius: 50%; transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .toggle input:checked + .slider { background: #4F46E5; }
+    .toggle input:checked + .slider::before { transform: translateX(20px); }
+
+    .stats {
+      padding: 16px 18px;
+    }
+    .stat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0;
+    }
+    .stat-row:not(:last-child) {
+      border-bottom: 1px solid #F1F5F9;
+    }
+    .stat-label {
+      font-size: 13px; color: #64748B;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .stat-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .stat-dot.red { background: #EF4444; }
+    .stat-dot.blue { background: #3B82F6; }
+    .stat-dot.green { background: #10B981; }
+    .stat-value {
+      font-size: 14px; font-weight: 700; color: #1E293B;
+    }
+
+    .site-info {
+      padding: 12px 18px;
+      border-top: 1px solid #E2E8F0;
+      font-size: 11px; color: #94A3B8;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .site-info .domain {
+      font-weight: 600; color: #64748B;
+    }
+
+    .footer {
+      padding: 10px 18px;
+      border-top: 1px solid #E2E8F0;
+      text-align: center;
+    }
+    .footer a {
+      font-size: 11px; color: #4F46E5; text-decoration: none;
+      font-weight: 500;
+    }
+    .footer a:hover { text-decoration: underline; }
+
+    .no-issues {
+      text-align: center; padding: 20px 18px;
+    }
+    .no-issues .check-icon {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: #D1FAE5; color: #10B981;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 8px; font-size: 20px;
+    }
+    .no-issues p {
+      font-size: 13px; color: #64748B;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-icon">G</div>
+    <div>
+      <h1>Grammar & Spelling Buddy</h1>
+      <p>v1.0.0 — Free forever</p>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span class="label">Extension active</span>
+    <label class="toggle">
+      <input type="checkbox" id="enableToggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div id="statsArea" class="stats">
+    <div class="stat-row">
+      <span class="stat-label"><span class="stat-dot red"></span> Spelling errors</span>
+      <span class="stat-value" id="spellingCount">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label"><span class="stat-dot blue"></span> Grammar issues</span>
+      <span class="stat-value" id="grammarCount">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label"><span class="stat-dot green"></span> Status</span>
+      <span class="stat-value" id="statusText" style="color: #10B981;">Checking...</span>
+    </div>
+  </div>
+
+  <div id="noIssues" class="no-issues" style="display: none;">
+    <div class="check-icon">&#10003;</div>
+    <p>No issues found on this page!</p>
+  </div>
+
+  <div class="site-info">
+    &#128274; All checks run locally — <span class="domain" id="siteDomain">this site</span>
+  </div>
+
+  <div class="footer">
+    <a href="https://github.com/grammar-spelling-buddy" target="_blank">GitHub</a>
+    &nbsp;&middot;&nbsp;
+    <a href="#" id="reportLink">Report a bug</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grammar & Spelling Buddy — Free Chrome Extension</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #4F46E5;
+      --primary-dark: #4338CA;
+      --primary-light: #EEF2FF;
+      --accent: #10B981;
+      --accent-light: #D1FAE5;
+      --text: #1E293B;
+      --text-muted: #64748B;
+      --bg: #FFFFFF;
+      --bg-alt: #F8FAFC;
+      --border: #E2E8F0;
+      --red-underline: #EF4444;
+      --blue-underline: #3B82F6;
+      --radius: 12px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- NAV ---- */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+    .nav-inner {
+      max-width: 1120px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .logo {
+      font-weight: 800; font-size: 1.15rem; color: var(--primary);
+      display: flex; align-items: center; gap: 8px; text-decoration: none;
+    }
+    .logo-icon {
+      width: 32px; height: 32px; background: var(--primary); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 18px; font-weight: 700;
+    }
+    .nav-links { display: flex; gap: 2rem; align-items: center; }
+    .nav-links a {
+      text-decoration: none; color: var(--text-muted); font-size: 0.9rem;
+      font-weight: 500; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px; border-radius: 8px; font-weight: 600;
+      font-size: 0.9rem; text-decoration: none; transition: all 0.2s;
+      border: none; cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--primary); color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .btn-outline {
+      background: transparent; color: var(--primary); border: 2px solid var(--primary);
+    }
+    .btn-outline:hover { background: var(--primary-light); }
+    .btn-large { padding: 14px 32px; font-size: 1rem; border-radius: 10px; }
+    .btn svg { width: 18px; height: 18px; }
+
+    /* ---- HERO ---- */
+    .hero {
+      padding: 140px 2rem 80px;
+      text-align: center;
+      background: linear-gradient(180deg, var(--primary-light) 0%, var(--bg) 100%);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent-light); color: #065F46; font-size: 0.82rem;
+      font-weight: 600; padding: 6px 14px; border-radius: 50px; margin-bottom: 1.5rem;
+    }
+    .hero-badge span { font-size: 1rem; }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.5rem); font-weight: 800;
+      line-height: 1.15; max-width: 700px; margin: 0 auto 1.25rem;
+    }
+    .hero h1 .highlight {
+      background: linear-gradient(135deg, var(--primary), #7C3AED);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.15rem; color: var(--text-muted); max-width: 540px;
+      margin: 0 auto 2rem;
+    }
+    .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+    /* ---- DEMO PREVIEW ---- */
+    .demo-section { padding: 0 2rem 80px; }
+    .demo-card {
+      max-width: 720px; margin: -20px auto 0;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 16px; box-shadow: var(--shadow-lg); overflow: hidden;
+    }
+    .demo-toolbar {
+      background: var(--bg-alt); padding: 10px 16px;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .demo-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .demo-dot.red { background: #EF4444; }
+    .demo-dot.yellow { background: #F59E0B; }
+    .demo-dot.green { background: #10B981; }
+    .demo-toolbar span { margin-left: 12px; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+    .demo-body { padding: 28px 32px; font-size: 1.05rem; line-height: 1.9; }
+    .demo-body .error-spelling {
+      text-decoration: underline wavy var(--red-underline);
+      text-decoration-skip-ink: none; cursor: pointer; position: relative;
+    }
+    .demo-body .error-grammar {
+      text-decoration: underline wavy var(--blue-underline);
+      text-decoration-skip-ink: none; cursor: pointer; position: relative;
+    }
+    .demo-body .tooltip {
+      display: none; position: absolute; bottom: calc(100% + 8px); left: 50%;
+      transform: translateX(-50%); background: #1E293B; color: #fff;
+      padding: 8px 14px; border-radius: 8px; font-size: 0.82rem;
+      white-space: nowrap; z-index: 10; font-weight: 500;
+    }
+    .demo-body .tooltip::after {
+      content: ''; position: absolute; top: 100%; left: 50%;
+      transform: translateX(-50%); border: 6px solid transparent;
+      border-top-color: #1E293B;
+    }
+    .demo-body .error-spelling:hover .tooltip,
+    .demo-body .error-grammar:hover .tooltip { display: block; }
+    .demo-stats {
+      display: flex; justify-content: space-between; padding: 14px 32px;
+      background: var(--bg-alt); border-top: 1px solid var(--border);
+      font-size: 0.82rem; color: var(--text-muted); font-weight: 500;
+    }
+    .demo-stats .count { color: var(--primary); font-weight: 700; }
+
+    /* ---- SECTION COMMON ---- */
+    section { padding: 80px 2rem; scroll-margin-top: 72px; }
+    .section-alt { background: var(--bg-alt); }
+    .section-header { text-align: center; max-width: 600px; margin: 0 auto 3rem; }
+    .section-header h2 { font-size: 2rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .section-header p { color: var(--text-muted); font-size: 1.05rem; }
+    .container { max-width: 1120px; margin: 0 auto; }
+
+    /* ---- FEATURES ---- */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; margin-bottom: 1rem;
+    }
+    .feature-icon.purple { background: #EDE9FE; }
+    .feature-icon.blue { background: #DBEAFE; }
+    .feature-icon.green { background: #D1FAE5; }
+    .feature-icon.orange { background: #FEF3C7; }
+    .feature-icon.pink { background: #FCE7F3; }
+    .feature-icon.teal { background: #CCFBF1; }
+    .feature-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feature-card p { color: var(--text-muted); font-size: 0.92rem; }
+
+    /* ---- HOW IT WORKS ---- */
+    .steps {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 2rem; text-align: center;
+    }
+    .step-num {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--primary); color: #fff; font-weight: 800;
+      font-size: 1.2rem; display: flex; align-items: center;
+      justify-content: center; margin: 0 auto 1rem;
+    }
+    .step h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .step p { color: var(--text-muted); font-size: 0.92rem; max-width: 280px; margin: 0 auto; }
+
+    /* ---- COMPARISON TABLE ---- */
+    .comparison-table {
+      width: 100%; border-collapse: collapse;
+      background: var(--bg); border-radius: var(--radius);
+      overflow: hidden; box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+    .comparison-table th, .comparison-table td {
+      padding: 16px 20px; text-align: left; font-size: 0.92rem;
+    }
+    .comparison-table thead th {
+      background: var(--primary); color: #fff; font-weight: 700;
+    }
+    .comparison-table thead th:first-child { text-align: left; }
+    .comparison-table thead th:not(:first-child) { text-align: center; }
+    .comparison-table tbody td:not(:first-child) { text-align: center; }
+    .comparison-table tbody tr { border-bottom: 1px solid var(--border); }
+    .comparison-table tbody tr:last-child { border-bottom: none; }
+    .comparison-table tbody tr:nth-child(even) { background: var(--bg-alt); }
+    .comparison-table .check { color: var(--accent); font-weight: 700; font-size: 1.1rem; }
+    .comparison-table .cross { color: #CBD5E1; font-size: 1.1rem; }
+    .comparison-table .highlight-col { background: rgba(79,70,229,0.04); }
+    .table-wrapper { max-width: 800px; margin: 0 auto; overflow-x: auto; }
+
+    /* ---- FAQ ---- */
+    .faq-list { max-width: 700px; margin: 0 auto; }
+    .faq-item {
+      border-bottom: 1px solid var(--border); padding: 20px 0;
+    }
+    .faq-question {
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; font-weight: 600; font-size: 1rem;
+      background: none; border: none; width: 100%; text-align: left;
+      color: var(--text); padding: 0; font-family: inherit;
+    }
+    .faq-question:hover { color: var(--primary); }
+    .faq-arrow {
+      font-size: 1.2rem; transition: transform 0.3s; color: var(--text-muted);
+    }
+    .faq-answer {
+      max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease;
+      color: var(--text-muted); font-size: 0.92rem; line-height: 1.7;
+    }
+    .faq-item.active .faq-answer { max-height: 200px; padding-top: 12px; }
+    .faq-item.active .faq-arrow { transform: rotate(180deg); }
+
+    /* ---- CTA ---- */
+    .cta-section {
+      text-align: center; padding: 80px 2rem;
+      background: linear-gradient(135deg, var(--primary) 0%, #7C3AED 100%);
+      color: #fff;
+    }
+    .cta-section h2 { font-size: 2rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .cta-section p { font-size: 1.1rem; opacity: 0.85; margin-bottom: 2rem; max-width: 480px; margin-left: auto; margin-right: auto; }
+    .btn-white { background: #fff; color: var(--primary); font-weight: 700; }
+    .btn-white:hover { background: #F1F5F9; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+    /* ---- FOOTER ---- */
+    footer {
+      padding: 40px 2rem; text-align: center;
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem; color: var(--text-muted);
+    }
+    footer a { color: var(--primary); text-decoration: none; }
+
+    /* ---- RESPONSIVE ---- */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .steps { grid-template-columns: 1fr; gap: 2.5rem; }
+      .features-grid { grid-template-columns: 1fr; }
+      .hero { padding: 120px 1.5rem 60px; }
+      section { padding: 60px 1.5rem; }
+      .comparison-table th, .comparison-table td { padding: 12px 10px; font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="logo">
+        <div class="logo-icon">G</div>
+        Grammar & Spelling Buddy
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#compare">Compare</a>
+        <a href="#faq">FAQ</a>
+        <a href="#download" class="btn btn-primary">Add to Chrome — Free</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge"><span>&#10003;</span> 100% Free — No account required</div>
+    <h1>Write with confidence.<br><span class="highlight">No bloat. No cost.</span></h1>
+    <p>A lightweight Chrome extension that catches spelling and grammar mistakes as you type — privately, instantly, and without the upsells.</p>
+    <div class="hero-buttons">
+      <a href="#download" class="btn btn-primary btn-large">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
+        Add to Chrome — It's Free
+      </a>
+      <a href="#features" class="btn btn-outline btn-large">See Features</a>
+    </div>
+  </section>
+
+  <!-- LIVE DEMO PREVIEW -->
+  <div class="demo-section">
+    <div class="demo-card">
+      <div class="demo-toolbar">
+        <div class="demo-dot red"></div>
+        <div class="demo-dot yellow"></div>
+        <div class="demo-dot green"></div>
+        <span>compose email — Gmail</span>
+      </div>
+      <div class="demo-body">
+        Hi team, I wanted to <span class="error-grammar">gave<span class="tooltip">&#9998; Did you mean "give"? (verb tense)</span></span> everyone a quick update on the project. We've made
+        <span class="error-spelling">signifcant<span class="tooltip">&#9998; significant</span></span> progress this week and the results
+        <span class="error-grammar">is<span class="tooltip">&#9998; "are" — subject-verb agreement</span></span> looking very promising. I'll send the full report
+        <span class="error-spelling">tommorrow<span class="tooltip">&#9998; tomorrow</span></span> morning.
+      </div>
+      <div class="demo-stats">
+        <span><span class="count">2</span> spelling errors</span>
+        <span><span class="count">2</span> grammar issues</span>
+        <span>Checked in <span class="count">&lt;1s</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section id="features" class="section-alt">
+    <div class="container">
+      <div class="section-header">
+        <h2>Everything you need. Nothing you don't.</h2>
+        <p>Grammar & Spelling Buddy does the essentials better than anyone — and stays out of your way.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon purple">&#9998;</div>
+          <h3>Spelling Corrections</h3>
+          <p>Catches misspellings in real time with red underlines and one-click fixes. Supports 40,000+ English words.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon blue">&#128221;</div>
+          <h3>Grammar Checks</h3>
+          <p>Detects subject-verb agreement, tense issues, missing articles, and common grammar mistakes.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon green">&#128274;</div>
+          <h3>100% Private</h3>
+          <p>All checking happens locally in your browser. Your text never leaves your device — no cloud, no servers.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon orange">&#9889;</div>
+          <h3>Instant Results</h3>
+          <p>No loading spinners. Corrections appear as you type with zero perceptible delay.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon pink">&#127959;</div>
+          <h3>Works Everywhere</h3>
+          <p>Gmail, Google Docs, LinkedIn, Twitter, Notion, Slack — any text field on any website.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon teal">&#128171;</div>
+          <h3>Lightweight</h3>
+          <p>Under 2 MB. No background processes, no memory hogs, no CPU drain. Just clean, fast checking.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how-it-works">
+    <div class="container">
+      <div class="section-header">
+        <h2>Up and running in 30 seconds</h2>
+        <p>No accounts, no configuration, no tutorials. Just install and write.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Install the Extension</h3>
+          <p>Click "Add to Chrome" and confirm. That's the only setup step.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Start Typing Anywhere</h3>
+          <p>Grammar & Spelling Buddy automatically activates on every text field it finds.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Click to Fix</h3>
+          <p>Hover over underlined words to see suggestions. Click to accept. Done.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON TABLE -->
+  <section id="compare" class="section-alt">
+    <div class="container">
+      <div class="section-header">
+        <h2>How we stack up</h2>
+        <p>We do less on purpose — and that's the point.</p>
+      </div>
+      <div class="table-wrapper">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th class="highlight-col">Grammar & Spelling Buddy</th>
+              <th>Grammarly Free</th>
+              <th>Grammarly Premium</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Spelling corrections</td>
+              <td class="highlight-col"><span class="check">&#10003;</span></td>
+              <td><span class="check">&#10003;</span></td>
+              <td><span class="check">&#10003;</span></td>
+            </tr>
+            <tr>
+              <td>Grammar checks</td>
+              <td class="highlight-col"><span class="check">&#10003;</span></td>
+              <td><span class="check">&#10003;</span></td>
+              <td><span class="check">&#10003;</span></td>
+            </tr>
+            <tr>
+              <td>No account required</td>
+              <td class="highlight-col"><span class="check">&#10003;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>100% local / private</td>
+              <td class="highlight-col"><span class="check">&#10003;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>No upsell popups</td>
+              <td class="highlight-col"><span class="check">&#10003;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+              <td><span class="check">&#10003;</span></td>
+            </tr>
+            <tr>
+              <td>Lightweight (&lt;2 MB)</td>
+              <td class="highlight-col"><span class="check">&#10003;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>Tone detection</td>
+              <td class="highlight-col"><span class="cross">&#10007;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+              <td><span class="check">&#10003;</span></td>
+            </tr>
+            <tr>
+              <td>AI rewriting</td>
+              <td class="highlight-col"><span class="cross">&#10007;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+              <td><span class="check">&#10003;</span></td>
+            </tr>
+            <tr>
+              <td><strong>Price</strong></td>
+              <td class="highlight-col"><strong style="color: var(--accent);">Free forever</strong></td>
+              <td>Free</td>
+              <td>$12/mo</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="container">
+      <div class="section-header">
+        <h2>Frequently asked questions</h2>
+      </div>
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Is it really free? What's the catch?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">There's no catch. Grammar & Spelling Buddy is a free, open-source project. There are no premium tiers, no ads, no data collection, and no accounts. It's built as a simple tool that does one thing well.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Does it send my text to the cloud?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">No. All spell-checking and grammar analysis happens locally inside your browser. Your text never leaves your device. There are zero network requests for checking — you can even use it offline.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Which websites does it work on?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">It works on virtually any website with text input fields — Gmail, Google Docs, LinkedIn, Twitter/X, Notion, Slack, Reddit, and thousands more. If you can type in it, Grammar & Spelling Buddy will check it.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            How is this different from my browser's built-in spell check?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">Your browser's built-in checker only catches basic misspellings. Grammar & Spelling Buddy also detects grammar issues like subject-verb agreement, verb tense errors, missing articles, and more — with clearer suggestions and one-click fixes.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Will it slow down my browser?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">No. The extension is under 2 MB and uses minimal CPU and memory. It's designed to be invisible until you need it. No background processes, no performance impact.</div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            Can I turn it off on specific websites?
+            <span class="faq-arrow">&#9660;</span>
+          </button>
+          <div class="faq-answer">Yes. Right-click the extension icon and select "Disable on this site." You can also manage your allowed/blocked sites from the extension settings popup.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="download" class="cta-section">
+    <h2>Better writing starts now.</h2>
+    <p>Install Grammar & Spelling Buddy in seconds and write with confidence — no sign-up, no cost, no compromises.</p>
+    <a href="#" class="btn btn-white btn-large">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
+      Add to Chrome — It's Free
+    </a>
+  </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; 2026 Grammar & Spelling Buddy. Free and open source. <a href="#">Privacy Policy</a> &middot; <a href="#">GitHub</a></p>
+  </footer>
+
+  <!-- FAQ TOGGLE SCRIPT -->
+  <script>
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = btn.parentElement;
+        const wasActive = item.classList.contains('active');
+        // Close all items and reset aria
+        document.querySelectorAll('.faq-item').forEach(i => {
+          i.classList.remove('active');
+          i.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+        });
+        if (!wasActive) {
+          item.classList.add('active');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    // Smooth scroll for anchor links (exclude logo and empty hrefs)
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const href = a.getAttribute('href');
+        if (href === '#' || a.classList.contains('logo')) return; // skip logo and bare # links
+        const target = document.querySelector(href);
+        if (target) {
+          e.preventDefault();
+          const navHeight = 72;
+          const targetPos = target.getBoundingClientRect().top + window.scrollY - navHeight;
+          window.scrollTo({ top: targetPos, behavior: 'smooth' });
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

@@ -149,17 +149,8 @@
 }
 
 /* ─── Mirror Overlay (underlines in textareas) ─────────── */
-.gsb-mirror-container {
-  position: relative;
-  display: inline-block;
-}
-
 .gsb-mirror {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   pointer-events: none;
   overflow: hidden;
   color: transparent !important;
@@ -169,12 +160,6 @@
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow-wrap: break-word;
-}
-
-.gsb-mirror-container textarea {
-  position: relative;
-  z-index: 1;
-  background: transparent !important;
 }
 
 .gsb-mirror mark.gsb-error-spelling {

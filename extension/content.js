@@ -325,25 +325,34 @@
     if (mirrorMap.has(element)) return mirrorMap.get(element);
     if (!element.parentElement) return null;
 
-    // Skip single-line inputs (too small for overlay)
+    // Skip single-line inputs — use positioned overlay instead
     if (element.tagName === "INPUT") {
       mirrorMap.set(element, null);
       return null;
     }
 
-    const container = document.createElement("div");
-    container.className = "gsb-mirror-container";
+    // Use a non-destructive approach: position mirror absolutely behind
+    // the textarea WITHOUT re-parenting it (avoids breaking site layouts)
+    const parent = element.parentElement;
+    const parentPos = getComputedStyle(parent).position;
+    if (parentPos === "static") {
+      parent.style.position = "relative";
+    }
 
     const mirror = document.createElement("div");
     mirror.className = "gsb-mirror";
-    container.appendChild(mirror);
+    // Insert mirror right before the textarea in the same parent
+    parent.insertBefore(mirror, element);
 
-    // Insert container before the textarea, then move textarea inside
-    element.parentElement.insertBefore(container, element);
-    container.appendChild(element);
+    // Make textarea transparent so mirror underlines show through
+    element.style.setProperty("background", "transparent", "important");
+    element.style.position = "relative";
+    element.style.zIndex = "1";
 
     // Copy textarea styles to mirror
     syncMirrorStyles(element, mirror);
+    // Position mirror to exactly overlay the textarea
+    positionMirror(element, mirror);
 
     // Keep mirror scroll in sync
     element.addEventListener("scroll", () => {
@@ -351,11 +360,14 @@
       mirror.scrollLeft = element.scrollLeft;
     });
 
-    // Re-sync styles on resize (store ref for cleanup)
-    const ro = new ResizeObserver(() => syncMirrorStyles(element, mirror));
+    // Re-sync styles and position on resize
+    const ro = new ResizeObserver(() => {
+      syncMirrorStyles(element, mirror);
+      positionMirror(element, mirror);
+    });
     ro.observe(element);
 
-    const entry = { container, mirror, resizeObserver: ro };
+    const entry = { mirror, resizeObserver: ro };
     mirrorMap.set(element, entry);
     return entry;
   }
@@ -365,12 +377,29 @@
     const props = [
       "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing",
       "wordSpacing", "textIndent", "textTransform", "whiteSpace", "wordWrap",
-      "overflowWrap", "padding", "paddingTop", "paddingRight", "paddingBottom",
-      "paddingLeft", "borderWidth", "borderTopWidth", "borderRightWidth",
-      "borderBottomWidth", "borderLeftWidth", "boxSizing", "width",
+      "overflowWrap", "paddingTop", "paddingRight", "paddingBottom",
+      "paddingLeft", "borderTopWidth", "borderRightWidth",
+      "borderBottomWidth", "borderLeftWidth", "boxSizing",
     ];
     props.forEach((p) => { mirror.style[p] = cs[p]; });
-    mirror.style.height = cs.height;
+    mirror.style.width = textarea.offsetWidth + "px";
+    mirror.style.height = textarea.offsetHeight + "px";
+  }
+
+  function positionMirror(textarea, mirror) {
+    // Absolutely position the mirror to sit exactly behind the textarea
+    mirror.style.position = "absolute";
+    mirror.style.top = textarea.offsetTop + "px";
+    mirror.style.left = textarea.offsetLeft + "px";
+    mirror.style.zIndex = "0";
+    mirror.style.pointerEvents = "none";
+    mirror.style.overflow = "hidden";
+    mirror.style.whiteSpace = "pre-wrap";
+    mirror.style.wordWrap = "break-word";
+    mirror.style.overflowWrap = "break-word";
+    mirror.style.color = "transparent";
+    mirror.style.background = "transparent";
+    mirror.style.borderColor = "transparent";
   }
 
   function renderMirrorHighlights(element, issues) {
@@ -388,8 +417,11 @@
     if (issues.length === 0) {
       mirror.innerHTML = escapeHtml(text) + "\u200b";
       // Remove badge if it exists
-      const badge = entry.container.querySelector(".gsb-badge");
-      if (badge) badge.remove();
+      const parent = element.parentElement;
+      if (parent) {
+        const badge = parent.querySelector(".gsb-badge");
+        if (badge) badge.remove();
+      }
       return;
     }
 
@@ -416,10 +448,7 @@
   }
 
   function renderBadge(element, issues) {
-    // Find the right parent (mirror container or original parent)
-    const container = mirrorMap.has(element) && mirrorMap.get(element)
-      ? mirrorMap.get(element).container
-      : element.parentElement;
+    const container = element.parentElement;
     if (!container) return;
 
     // Remove existing badge

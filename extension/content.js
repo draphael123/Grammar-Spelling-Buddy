@@ -648,7 +648,11 @@
         const grammarIssueCount = issues.filter((i) => i.type !== "spelling").length;
         chrome.runtime.sendMessage({
           type: "GSB_ISSUE_COUNT",
+          action: "GSB_ISSUE_COUNT",
           count: issues.length,
+          issueCount: issues.length,
+          spelling: spellingIssueCount,
+          grammar: grammarIssueCount,
           spellingCount: spellingIssueCount,
           grammarCount: grammarIssueCount,
           url: location.href,
@@ -801,10 +805,12 @@
 
   if (typeof chrome !== "undefined" && chrome.runtime) {
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-      if (msg.type === "GSB_TOGGLE") {
+      // Support both "type" (background.js) and "action" (popup.js) keys
+      const action = msg.action || msg.type;
+
+      if (action === "GSB_TOGGLE") {
         state.enabled = msg.enabled;
         if (!state.enabled) {
-          // Remove all badges and tooltips
           document.querySelectorAll(".gsb-badge").forEach((b) => b.remove());
           removeTooltip();
         } else {
@@ -813,16 +819,20 @@
         sendResponse({ ok: true });
       }
 
-      if (msg.type === "GSB_GET_STATUS") {
+      if (action === "GSB_GET_STATUS") {
         let totalIssues = 0;
+        let spellingTotal = 0;
+        let grammarTotal = 0;
         let pageText = "";
         document
           .querySelectorAll("textarea, input, [contenteditable]")
           .forEach((el) => {
             const issues = state.issueMap.get(el);
-            if (issues) totalIssues += issues.length;
-
-            // Collect text from all checked elements
+            if (issues) {
+              totalIssues += issues.length;
+              spellingTotal += issues.filter((i) => i.type === "spelling").length;
+              grammarTotal += issues.filter((i) => i.type !== "spelling").length;
+            }
             if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
               pageText += (el.value || "") + " ";
             } else if (el.isContentEditable) {
@@ -833,9 +843,25 @@
         sendResponse({
           enabled: state.enabled,
           issueCount: totalIssues,
+          spelling: spellingTotal,
+          grammar: grammarTotal,
           url: location.href,
           pageText: pageText.trim(),
         });
+      }
+
+      if (action === "GSB_GET_PAGE_TEXT") {
+        let pageText = "";
+        document
+          .querySelectorAll("textarea, input, [contenteditable]")
+          .forEach((el) => {
+            if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
+              pageText += (el.value || "") + " ";
+            } else if (el.isContentEditable) {
+              pageText += (el.innerText || "") + " ";
+            }
+          });
+        sendResponse({ pageText: pageText.trim() });
       }
 
       return true; // keep channel open for async response

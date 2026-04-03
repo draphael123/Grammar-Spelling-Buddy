@@ -70,8 +70,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // ─── Badge Updates ────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, sender) => {
-  if (msg.type === "GSB_ISSUE_COUNT" && sender.tab) {
-    const count = msg.count;
+  const action = msg.action || msg.type;
+  if (action === "GSB_ISSUE_COUNT" && sender.tab) {
+    const count = msg.count || msg.issueCount || 0;
 
     if (count === 0) {
       chrome.action.setBadgeText({ text: "", tabId: sender.tab.id });

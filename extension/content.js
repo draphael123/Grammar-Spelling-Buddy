@@ -235,8 +235,27 @@
 
   // ─── Tooltip ────────────────────────────────────────────
 
-  function showTooltip(issue, rect, element) {
+  function showTooltip(issue, posInfo, element) {
     removeTooltip();
+
+    // posInfo can be a DOMRect or { clientX, clientY } from a click event
+    let anchorX, anchorY, anchorBottom;
+    if (posInfo && posInfo.width > 0) {
+      // DOMRect from getBoundingClientRect
+      anchorX = posInfo.left;
+      anchorY = posInfo.top;
+      anchorBottom = posInfo.bottom;
+    } else if (posInfo && (posInfo.clientX || posInfo.clientY)) {
+      // Click event coordinates
+      anchorX = posInfo.clientX;
+      anchorY = posInfo.clientY - 8;
+      anchorBottom = posInfo.clientY + 16;
+    } else {
+      // Fallback: center of viewport
+      anchorX = window.innerWidth / 2 - 100;
+      anchorY = window.innerHeight / 2 - 40;
+      anchorBottom = anchorY + 20;
+    }
 
     const tip = document.createElement("div");
     tip.className = "gsb-tooltip";
@@ -244,27 +263,38 @@
     tip.setAttribute("aria-live", "polite");
 
     const suggestions = issue.suggestions && issue.suggestions.length ? issue.suggestions : (issue.suggestion ? [issue.suggestion] : []);
+    const wrongWord = issue.word || "";
 
-    let suggestionsHtml = '';
+    // Grammarly-style layout: show wrong word → correction
+    let suggestionsHtml = "";
     if (suggestions.length > 0) {
       suggestionsHtml = `<div class="gsb-suggestions-list">`;
       suggestions.forEach((s, idx) => {
         const isPrimary = idx === 0;
-        suggestionsHtml += `<button class="${isPrimary ? 'gsb-tooltip-suggestion' : 'gsb-tooltip-alt-suggestion'}" data-action="fix" data-fix="${escapeHtml(s)}">${escapeHtml(s)}</button>`;
+        if (isPrimary) {
+          suggestionsHtml += `<button class="gsb-tooltip-suggestion" data-action="fix" data-fix="${escapeHtml(s)}"><span class="gsb-wrong-word">${escapeHtml(wrongWord)}</span> → <strong>${escapeHtml(s)}</strong></button>`;
+        } else {
+          suggestionsHtml += `<button class="gsb-tooltip-alt-suggestion" data-action="fix" data-fix="${escapeHtml(s)}">${escapeHtml(s)}</button>`;
+        }
       });
       suggestionsHtml += `</div>`;
     }
 
-    tip.innerHTML = `
-      <div class="gsb-tooltip-type ${issue.type}">${issue.type}</div>
-      <div class="gsb-tooltip-message">${escapeHtml(issue.message)}</div>
-      ${suggestionsHtml}
-      <div class="gsb-tooltip-actions"><button class="gsb-dismiss" data-action="dismiss">Ignore</button></div>
-    `;
+    tip.innerHTML =
+      `<div class="gsb-tooltip-header">` +
+        `<span class="gsb-tooltip-type ${issue.type}">${issue.type === "spelling" ? "Spelling" : "Grammar"}</span>` +
+        `<button class="gsb-dismiss" data-action="dismiss" title="Dismiss">✕</button>` +
+      `</div>` +
+      (issue.message ? `<div class="gsb-tooltip-message">${escapeHtml(issue.message)}</div>` : "") +
+      suggestionsHtml +
+      `<div class="gsb-tooltip-footer"><button class="gsb-ignore-word" data-action="ignore">Ignore "${escapeHtml(wrongWord)}"</button></div>`;
 
-    // Position above the word
-    tip.style.left = rect.left + "px";
-    tip.style.top = rect.top - 80 + "px";
+    // Position: fixed so it works everywhere including Gmail
+    tip.style.position = "fixed";
+    tip.style.left = anchorX + "px";
+    tip.style.top = (anchorY - 8) + "px";
+    tip.style.zIndex = "2147483647";
+    tip.style.transform = "translateY(-100%)";
 
     document.body.appendChild(tip);
     state.activeTooltip = tip;
@@ -272,25 +302,40 @@
     // Adjust if off-screen
     const tipRect = tip.getBoundingClientRect();
     if (tipRect.top < 0) {
-      tip.style.top = rect.bottom + 8 + "px";
+      // Show below instead
+      tip.style.top = anchorBottom + 8 + "px";
+      tip.style.transform = "none";
       tip.classList.add("below");
     }
     if (tipRect.right > window.innerWidth) {
-      tip.style.left = window.innerWidth - tipRect.width - 8 + "px";
+      tip.style.left = (window.innerWidth - tipRect.width - 8) + "px";
     }
     if (tipRect.left < 0) {
       tip.style.left = "8px";
     }
 
-    // Handle clicks
+    // Handle clicks inside the tooltip
     tip.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-action]");
       if (!btn) return;
+      e.stopPropagation();
       const action = btn.dataset.action;
       if (action === "fix" && btn.dataset.fix) {
         applyFix(element, issue, btn.dataset.fix);
         removeTooltip();
       } else if (action === "dismiss") {
+        removeTooltip();
+      } else if (action === "ignore") {
+        // Add word to ignored list
+        if (typeof chrome !== "undefined" && chrome.storage) {
+          chrome.storage.sync.get({ gsbIgnoredWords: [] }, (data) => {
+            const words = data.gsbIgnoredWords || [];
+            if (wrongWord && words.indexOf(wrongWord.toLowerCase()) === -1) {
+              words.push(wrongWord.toLowerCase());
+              chrome.storage.sync.set({ gsbIgnoredWords: words });
+            }
+          });
+        }
         removeTooltip();
       }
     });
@@ -747,14 +792,13 @@
       );
 
       if (clickedIssue) {
-        // Get approximate position of cursor
-        const rect = element.getBoundingClientRect();
-        showTooltip(clickedIssue, rect, element);
+        // Use click coordinates for reliable positioning
+        showTooltip(clickedIssue, { clientX: e.clientX, clientY: e.clientY }, element);
       }
       return;
     }
 
-    // For contenteditable
+    // For contenteditable (Gmail, Slack, etc.)
     if (element.isContentEditable || element.closest("[contenteditable]")) {
       const editableEl = element.closest("[contenteditable]") || element;
       const issues = state.issueMap.get(editableEl);
@@ -765,18 +809,24 @@
       if (!sel.rangeCount) return;
 
       const range = sel.getRangeAt(0);
-      const preRange = document.createRange();
-      preRange.selectNodeContents(editableEl);
-      preRange.setEnd(range.startContainer, range.startOffset);
-      const cursorPos = preRange.toString().length;
+      let cursorPos = 0;
+      try {
+        const preRange = document.createRange();
+        preRange.selectNodeContents(editableEl);
+        preRange.setEnd(range.startContainer, range.startOffset);
+        cursorPos = preRange.toString().length;
+      } catch (err) {
+        // If preRange fails, try character offset estimation
+        return;
+      }
 
       const clickedIssue = issues.find(
         (i) => cursorPos >= i.start && cursorPos < i.end
       );
 
       if (clickedIssue) {
-        const rect = range.getBoundingClientRect();
-        showTooltip(clickedIssue, rect, editableEl);
+        // Use click event coordinates — works even when getBoundingClientRect returns 0,0
+        showTooltip(clickedIssue, { clientX: e.clientX, clientY: e.clientY }, editableEl);
       }
     }
   }

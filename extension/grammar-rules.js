@@ -105,21 +105,29 @@ const GSB_GRAMMAR_RULES = [
   },
 
   // --- Article usage ---
+  // Words starting with vowel letters but consonant SOUNDS (use "a", not "an"):
+  //   u-words: unique, university, uniform, united, union, universal, usage, used,
+  //            useful, usual, user, using, utility, utensil, uranium, uterus
+  //   o-words: one, once
+  //   eu-words: European, eulogy, euphoria, eucalyptus
   {
     id: "a-an-vowel",
-    pattern: /\ba\s+([aeiou])/gi,
+    pattern: /\ba\s+([aeiou]\w*)/gi,
     message: () => `Use "an" before words starting with a vowel sound`,
     suggestion: (m) => "an " + m[1],
-    type: "grammar"
+    type: "grammar",
+    exceptions: /\ba\s+(uni\w+|use[dfrsu]\w*|using|usual\w*|usur\w+|util\w+|uter\w+|uran\w+|one|once|eu\w+)/i
   },
+  // Words starting with consonant letters but vowel SOUNDS (use "an", not "a"):
+  //   h-words: hour, honest, honor, honour, heir, herb, hors
+  //   acronyms/letters: an FBI, an MBA, an HTML (pronounced with vowel sounds)
   {
     id: "an-consonant",
-    pattern: /\ban\s+([bcdfghjklmnpqrstvwxyz])/gi,
-    // Exclude "an hour", "an honest", "an heir", "an honor" etc.
+    pattern: /\ban\s+([bcdfghjklmnpqrstvwxyz]\w*)/gi,
     message: () => `Use "a" before words starting with a consonant sound`,
     suggestion: (m) => "a " + m[1],
     type: "grammar",
-    exceptions: /\ban\s+(ho|heir|herb|honest|honor|honour|hour|hors)/i
+    exceptions: /\ban\s+(ho(u|ne|no|rs)|heir|herb|MBA|FBI|HTML|HTTP|SQL|LLC|RN|NP|MD|DO|HRT|SMS|MRI|X-?\w*)/i
   },
 
   // --- Verb tense ---

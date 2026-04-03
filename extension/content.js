@@ -17,6 +17,7 @@
     debounceTimers: new WeakMap(),
     checkedElements: new WeakSet(),
     issueMap: new WeakMap(), // element → issues[]
+    currentAdapter: null, // Active site adapter
   };
 
   // Load disabled sites from storage
@@ -472,6 +473,15 @@
         // Extension context may have been invalidated — that's fine
       }
     }
+
+    // Dispatch event for sidebar to listen to
+    try {
+      document.dispatchEvent(new CustomEvent("gsb-issues-updated", {
+        detail: { issues, element },
+      }));
+    } catch (e) {
+      // Fallback for environments that don't support CustomEvent
+    }
   }
 
   // ─── Event Listeners ───────────────────────────────────
@@ -498,6 +508,21 @@
   function scanForTextFields() {
     if (!state.enabled || isDisabledSite()) return;
 
+    // Get site-specific adapter if available
+    state.currentAdapter = window.getAdapterForSite ? window.getAdapterForSite() : null;
+
+    // If adapter is available, use its selectors
+    if (state.currentAdapter) {
+      state.currentAdapter.selectors.forEach((selector) => {
+        document.querySelectorAll(selector).forEach((element) => {
+          if (state.currentAdapter.shouldAttach(element)) {
+            attachListeners(element);
+          }
+        });
+      });
+    }
+
+    // Always scan for standard text inputs as fallback
     // Textareas
     document.querySelectorAll("textarea").forEach(attachListeners);
 
@@ -506,10 +531,13 @@
       .querySelectorAll('input[type="text"], input[type="email"], input[type="search"], input:not([type])')
       .forEach(attachListeners);
 
-    // Contenteditable elements
-    document
-      .querySelectorAll('[contenteditable="true"], [contenteditable=""]')
-      .forEach(attachListeners);
+    // Contenteditable elements (without adapter)
+    // Only if no adapter is active to avoid duplicates
+    if (!state.currentAdapter) {
+      document
+        .querySelectorAll('[contenteditable="true"], [contenteditable=""]')
+        .forEach(attachListeners);
+    }
   }
 
   // ─── MutationObserver (for SPAs) ────────────────────────
@@ -529,6 +557,15 @@
     }
   });
 
+  // Configure observer to watch adapter-specific selectors if available
+  function getObserverConfig() {
+    const config = {
+      childList: true,
+      subtree: true,
+    };
+    return config;
+  }
+
   // ─── Initialize ─────────────────────────────────────────
 
   function init() {
@@ -544,11 +581,13 @@
     // Initial scan
     scanForTextFields();
 
+    // Show notification for Google Docs if needed
+    if (window.notifyIfGoogleDocs) {
+      window.notifyIfGoogleDocs();
+    }
+
     // Watch for new elements (SPAs, dynamically loaded content)
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
+    observer.observe(document.body, getObserverConfig());
 
     console.log(
       "%c✓ Grammar & Spelling Buddy active",
@@ -574,23 +613,58 @@
 
       if (msg.type === "GSB_GET_STATUS") {
         let totalIssues = 0;
+        let pageText = "";
         document
           .querySelectorAll("textarea, input, [contenteditable]")
           .forEach((el) => {
             const issues = state.issueMap.get(el);
             if (issues) totalIssues += issues.length;
+
+            // Collect text from all checked elements
+            if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
+              pageText += (el.value || "") + " ";
+            } else if (el.isContentEditable) {
+              pageText += (el.innerText || "") + " ";
+            }
           });
 
         sendResponse({
           enabled: state.enabled,
           issueCount: totalIssues,
           url: location.href,
+          pageText: pageText.trim(),
         });
       }
 
       return true; // keep channel open for async response
     });
   }
+
+  // ─── Expose Functions to Global Window ───────────────────
+
+  // Get all issues from all elements on the page
+  window.__gsbGetIssues = function() {
+    const allIssues = [];
+    document
+      .querySelectorAll("textarea, input, [contenteditable]")
+      .forEach((element) => {
+        const issues = state.issueMap.get(element);
+        if (issues && issues.length > 0) {
+          issues.forEach((issue) => {
+            allIssues.push({
+              element,
+              issue,
+            });
+          });
+        }
+      });
+    return allIssues;
+  };
+
+  // Apply a fix to an element (called by sidebar)
+  window.__gsbApplyFix = function(element, issue) {
+    applyFix(element, issue);
+  };
 
   // ─── Boot ───────────────────────────────────────────────
   if (document.readyState === "loading") {

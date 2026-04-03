@@ -119,6 +119,39 @@
     .no-issues p {
       font-size: 13px; color: #64748B;
     }
+
+    .divider {
+      height: 1px; background: #E2E8F0; margin: 12px 18px;
+    }
+
+    .writing-stats {
+      padding: 16px 18px;
+    }
+    .writing-stats .stat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0;
+    }
+    .writing-stats .stat-row:not(:last-child) {
+      border-bottom: 1px solid #F1F5F9;
+    }
+    .writing-stats .stat-label {
+      font-size: 13px; color: #64748B;
+    }
+    .writing-stats .stat-value {
+      font-size: 14px; font-weight: 700; color: #1E293B;
+    }
+    .readability-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .readability-badge.easy { background: #10B981; }
+    .readability-badge.standard { background: #3B82F6; }
+    .readability-badge.advanced { background: #F59E0B; }
+    .readability-badge.expert { background: #8B5CF6; }
   </style>
 </head>
 <body>
@@ -156,6 +189,39 @@
   <div id="noIssues" class="no-issues" style="display: none;">
     <div class="check-icon">&#10003;</div>
     <p>No issues found on this page!</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <div id="writingStats" class="writing-stats">
+    <div class="stat-row">
+      <span class="stat-label">Word count</span>
+      <span class="stat-value" id="wordCount">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Character count</span>
+      <span class="stat-value" id="charCount">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Sentence count</span>
+      <span class="stat-value" id="sentenceCount">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Avg sentence length</span>
+      <span class="stat-value" id="avgSentenceLength">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Reading level</span>
+      <span class="stat-value" id="readingLevel">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Flesch-Kincaid grade</span>
+      <span class="stat-value" id="fleschGrade">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Passive voice %</span>
+      <span class="stat-value" id="passiveVoicePercent">0%</span>
+    </div>
   </div>
 
   <div class="site-info">

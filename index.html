@@ -6,6 +6,14 @@
   <title>Grammar & Spelling Buddy — Free Chrome Extension</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta property="og:title" content="Grammar & Spelling Buddy — Free Chrome Extension">
+  <meta property="og:description" content="A lightweight Chrome extension that catches spelling and grammar mistakes as you type — privately, instantly, and without the upsells.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://grammar-spelling-buddy.vercel.app">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Grammar & Spelling Buddy — Free Chrome Extension">
+  <meta name="twitter:description" content="A lightweight Chrome extension that catches spelling and grammar mistakes as you type — privately, instantly, and without the upsells.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%234F46E5' width='32' height='32'/><text x='50%' y='50%' font-size='20' font-weight='700' fill='white' text-anchor='middle' dominant-baseline='central'>G</text></svg>">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -175,6 +183,101 @@
       font-size: 0.82rem; color: var(--text-muted); font-weight: 500;
     }
     .demo-stats .count { color: var(--primary); font-weight: 700; }
+    @keyframes pulse-glow {
+      0%, 100% { transform: scale(1); text-shadow: 0 0 0 rgba(79, 70, 229, 0); }
+      50% { transform: scale(1.05); text-shadow: 0 0 8px rgba(79, 70, 229, 0.6); }
+    }
+
+    .pulse-3x {
+      animation: pulse-glow 0.6s ease-in-out 3;
+    }
+
+    .click-to-fix-label {
+      position: absolute; top: -24px; right: -20px;
+      background: var(--primary); color: #fff; font-size: 0.7rem;
+      padding: 4px 8px; border-radius: 4px; white-space: nowrap;
+      font-weight: 600; opacity: 1; animation: fadeOut 4s ease-in 0s forwards;
+      z-index: 11; pointer-events: none;
+    }
+
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* ---- TRY IT YOURSELF ---- */
+    .try-it-section {
+      max-width: 720px; margin: 40px auto 0; padding: 32px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 16px; box-shadow: var(--shadow-lg);
+    }
+
+    .try-it-section h2 {
+      font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    .try-it-textarea {
+      width: 100%; height: 160px; padding: 14px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 1rem; line-height: 1.6;
+      border: 1px solid var(--border); border-radius: 10px;
+      resize: vertical; margin-bottom: 16px;
+      color: var(--text); background: var(--bg-alt);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .try-it-textarea:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .results-bar {
+      display: flex; gap: 20px; padding: 14px 16px;
+      background: var(--bg-alt); border-radius: 10px;
+      margin-bottom: 16px; font-size: 0.9rem;
+    }
+
+    .result-item {
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .result-label { color: var(--text-muted); font-weight: 500; }
+    .result-count { color: var(--primary); font-weight: 700; font-size: 1.1rem; }
+
+    .issues-list {
+      max-height: 200px; overflow-y: auto;
+    }
+
+    .issue-card {
+      background: var(--bg-alt); border-left: 3px solid var(--red-underline);
+      padding: 12px; margin-bottom: 8px; border-radius: 6px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.9rem;
+    }
+
+    .issue-card.grammar {
+      border-left-color: var(--blue-underline);
+    }
+
+    .issue-text { color: var(--text); font-weight: 500; }
+    .issue-error { color: var(--red-underline); font-weight: 700; font-family: 'SFMono-Regular', Consolas, monospace; }
+    .issue-card.grammar .issue-error { color: var(--blue-underline); }
+
+    .issue-fix-btn {
+      background: var(--primary); color: #fff; border: none;
+      padding: 6px 12px; border-radius: 5px; font-size: 0.8rem;
+      font-weight: 600; cursor: pointer; transition: background 0.2s;
+    }
+
+    .issue-fix-btn:hover { background: var(--primary-dark); }
+
+    .no-issues {
+      text-align: center; padding: 20px;
+      color: var(--text-muted); font-size: 0.9rem;
+    }
+
 
     /* ---- SECTION COMMON ---- */
     section { padding: 80px 2rem; scroll-margin-top: 72px; }
@@ -381,7 +484,7 @@
         <span>compose email — Gmail</span>
       </div>
       <div class="demo-body">
-        Hi team, I wanted to <span class="error-grammar" data-fix="give">gave<span class="tooltip"><span class="fix-label">verb tense</span>&#9998; Did you mean "give"?<br><span class="fix-btn">Click to fix</span></span></span> everyone a quick update on the project. We've made
+        Hi team, I wanted to <span class="error-grammar" data-fix="give" id="first-error">gave<span class="click-to-fix-label">Click to fix →</span><span class="tooltip"><span class="fix-label">verb tense</span>&#9998; Did you mean "give"?<br><span class="fix-btn">Click to fix</span></span></span> everyone a quick update on the project. We've made
         <span class="error-spelling" data-fix="significant">signifcant<span class="tooltip"><span class="fix-label">spelling</span>&#9998; significant<br><span class="fix-btn">Click to fix</span></span></span> progress this week and the results
         <span class="error-grammar" data-fix="are">is<span class="tooltip"><span class="fix-label">subject-verb agreement</span>&#9998; "are"<br><span class="fix-btn">Click to fix</span></span></span> looking very promising. I'll send the full report
         <span class="error-spelling" data-fix="tomorrow">tommorrow<span class="tooltip"><span class="fix-label">spelling</span>&#9998; tomorrow<br><span class="fix-btn">Click to fix</span></span></span> morning.
@@ -390,6 +493,23 @@
         <span><span class="count">2</span> spelling errors</span>
         <span><span class="count">2</span> grammar issues</span>
         <span>Checked in <span class="count">&lt;1s</span></span>
+      </div>
+    </div>
+        <div class="try-it-section">
+      <h2>Try it yourself</h2>
+      <textarea class="try-it-textarea" id="try-it-textarea" placeholder="Type or paste text here to see live checking...">Hi team, I wanted to gave everyone a quick update. We've made signifcant progress and the results is looking very promising.</textarea>
+      <div class="results-bar">
+        <div class="result-item">
+          <span class="result-label">Spelling errors:</span>
+          <span class="result-count" id="spelling-count">0</span>
+        </div>
+        <div class="result-item">
+          <span class="result-label">Grammar issues:</span>
+          <span class="result-count" id="grammar-count">0</span>
+        </div>
+      </div>
+      <div class="issues-list" id="issues-list">
+        <div class="no-issues">No issues found</div>
       </div>
     </div>
   </div>
@@ -530,6 +650,18 @@
               <td><span class="check">&#10003;</span></td>
             </tr>
             <tr>
+              <td>Extension size</td>
+              <td class="highlight-col"><span class="check">&#10003;</span> &lt;2 MB</td>
+              <td><span class="cross">&#10007;</span> ~50 MB</td>
+              <td><span class="cross">&#10007;</span> ~50 MB</td>
+            </tr>
+            <tr>
+              <td>Works offline</td>
+              <td class="highlight-col"><span class="check">&#10003;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+              <td><span class="cross">&#10007;</span></td>
+            </tr>
+            <tr>
               <td><strong>Price</strong></td>
               <td class="highlight-col"><strong style="color: var(--accent);">Free forever</strong></td>
               <td>Free</td>
@@ -653,6 +785,201 @@
 
   <!-- FAQ TOGGLE SCRIPT -->
   <script>
+    // Pulse animation on first error on page load
+    window.addEventListener('load', () => {
+      const firstError = document.getElementById('first-error');
+      if (firstError) {
+        firstError.classList.add('pulse-3x');
+      }
+    });
+
+    // Simple spell checker and grammar checker
+    const commonWords = new Set([
+      'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are',
+      'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but',
+      'by', 'can', 'could', 'did', 'do', 'does', 'doing', 'down', 'during', 'each', 'few', 'for',
+      'from', 'further', 'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers', 'herself',
+      'him', 'himself', 'his', 'how', 'i', 'if', 'in', 'into', 'is', 'it', 'its', 'itself', 'just',
+      'me', 'might', 'more', 'most', 'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once',
+      'only', 'or', 'other', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', 'so', 'some',
+      'such', 'than', 'that', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there',
+      'these', 'they', 'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very',
+      'was', 'we', 'were', 'what', 'when', 'where', 'which', 'while', 'who', 'whom', 'why', 'will',
+      'with', 'you', 'your', 'yours', 'yourself', 'yourselves', 'hi', 'team', 'wanted', 'everyone',
+      'quick', 'update', 'project', 'made', 'progress', 'this', 'week', 'results', 'looking',
+      'promising', 'send', 'full', 'report', 'tomorrow', 'morning', 'we', 've', 'the',
+      'wrote', 'write', 'written', 'work', 'working', 'works', 'day', 'days', 'time', 'times',
+      'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'need', 'want', 'like',
+      'help', 'think', 'know', 'see', 'come', 'go', 'make', 'take', 'give', 'find', 'get', 'have',
+      'say', 'tell', 'ask', 'show', 'use', 'feel', 'try', 'look', 'call', 'meet', 'start', 'end',
+      'save', 'send', 'wait', 'leave', 'need', 'allow', 'avoid', 'receive', 'believe', 'achieve'
+    ]);
+
+    const misspellings = {
+      'signifcant': 'significant',
+      'tommorrow': 'tomorrow',
+      'recieve': 'receive',
+      'occured': 'occurred',
+      'wich': 'which',
+      'their': 'there', // common confusion
+      'untill': 'until',
+      'seperate': 'separate',
+      'accomodate': 'accommodate',
+      'occassion': 'occasion'
+    };
+
+    function checkText(text) {
+      const issues = [];
+      const words = text.match(/\w+/g) || [];
+      let charIndex = 0;
+
+      // Check for spelling errors
+      for (const word of words) {
+        const lower = word.toLowerCase();
+        if (misspellings[lower]) {
+          const index = text.indexOf(word, charIndex);
+          if (index !== -1) {
+            issues.push({
+              type: 'spelling',
+              word: word,
+              suggestion: misspellings[lower],
+              index: index,
+              length: word.length
+            });
+            charIndex = index + word.length;
+          }
+        }
+      }
+
+      // Check for common grammar patterns
+      const sentencePattern = /([A-Z][^.!?]*[.!?])/g;
+      let match;
+      while ((match = sentencePattern.exec(text)) !== null) {
+        const sentence = match[1];
+        
+        // Double words check
+        const doubleWords = /(\w+)\s+/gi;
+        let doubleMatch;
+        while ((doubleMatch = doubleWords.exec(sentence)) !== null) {
+          const startIdx = match.index + doubleMatch.index;
+          issues.push({
+            type: 'grammar',
+            word: doubleMatch[0],
+            suggestion: doubleMatch[1],
+            index: startIdx,
+            length: doubleMatch[0].length,
+            label: 'Double word'
+          });
+        }
+
+        // "could of" / "should of" check
+        if (/(could|should|would|must)\s+of/gi.test(sentence)) {
+          const ofMatch = /(could|should|would|must)\s+of/gi.exec(sentence);
+          if (ofMatch) {
+            const startIdx = match.index + ofMatch.index;
+            issues.push({
+              type: 'grammar',
+              word: ofMatch[0],
+              suggestion: ofMatch[1] + ' have',
+              index: startIdx,
+              length: ofMatch[0].length,
+              label: 'Grammar'
+            });
+          }
+        }
+
+        // Subject-verb agreement (simple check for "they is", "he are")
+        if (/(they|we|you)\s+(is|was)/gi.test(sentence)) {
+          const svMatch = /(they|we|you)\s+(is|was)/gi.exec(sentence);
+          if (svMatch) {
+            const startIdx = match.index + svMatch.index;
+            const correction = svMatch[2].toLowerCase() === 'is' ? 'are' : 'were';
+            issues.push({
+              type: 'grammar',
+              word: svMatch[0],
+              suggestion: svMatch[1] + ' ' + correction,
+              index: startIdx,
+              length: svMatch[0].length,
+              label: 'Subject-verb agreement'
+            });
+          }
+        }
+
+        if (/(he|she|it)\s+(are|were)/gi.test(sentence)) {
+          const svMatch = /(he|she|it)\s+(are|were)/gi.exec(sentence);
+          if (svMatch) {
+            const startIdx = match.index + svMatch.index;
+            const correction = svMatch[2].toLowerCase() === 'are' ? 'is' : 'was';
+            issues.push({
+              type: 'grammar',
+              word: svMatch[0],
+              suggestion: svMatch[1] + ' ' + correction,
+              index: startIdx,
+              length: svMatch[0].length,
+              label: 'Subject-verb agreement'
+            });
+          }
+        }
+      }
+
+      return issues.sort((a, b) => a.index - b.index);
+    }
+
+    function renderIssues(issues) {
+      const issuesList = document.getElementById('issues-list');
+      const spellingCount = issues.filter(i => i.type === 'spelling').length;
+      const grammarCount = issues.filter(i => i.type === 'grammar').length;
+
+      document.getElementById('spelling-count').textContent = spellingCount;
+      document.getElementById('grammar-count').textContent = grammarCount;
+
+      if (issues.length === 0) {
+        issuesList.innerHTML = '<div class="no-issues">No issues found</div>';
+        return;
+      }
+
+      issuesList.innerHTML = issues.map((issue, idx) => {
+        const isGrammar = issue.type === 'grammar';
+        return `
+          <div class="issue-card ${isGrammar ? 'grammar' : ''}">
+            <span><span class="issue-text">${isGrammar ? (issue.label || 'Grammar') : 'Spelling'}:</span> "<span class="issue-error">${issue.word}</span>" → "${issue.suggestion}"</span>
+            <button class="issue-fix-btn" data-index="${idx}">Fix</button>
+          </div>
+        `;
+      }).join('');
+
+      // Add fix button listeners
+      document.querySelectorAll('.issue-fix-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt(e.target.dataset.index);
+          const issue = issues[idx];
+          const textarea = document.getElementById('try-it-textarea');
+          const before = textarea.value.substring(0, issue.index);
+          const after = textarea.value.substring(issue.index + issue.length);
+          textarea.value = before + issue.suggestion + after;
+          textarea.dispatchEvent(new Event('input'));
+        });
+      });
+    }
+
+    // Debounced checker
+    let checkTimeout;
+    document.getElementById('try-it-textarea').addEventListener('input', () => {
+      clearTimeout(checkTimeout);
+      checkTimeout = setTimeout(() => {
+        const text = document.getElementById('try-it-textarea').value;
+        const issues = checkText(text);
+        renderIssues(issues);
+      }, 300);
+    });
+
+    // Initial check on load
+    window.addEventListener('load', () => {
+      const text = document.getElementById('try-it-textarea').value;
+      const issues = checkText(text);
+      renderIssues(issues);
+    });
+
     document.querySelectorAll('.faq-question').forEach(btn => {
       btn.addEventListener('click', () => {
         const item = btn.parentElement;

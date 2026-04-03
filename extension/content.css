@@ -178,3 +178,14 @@
   text-decoration-skip-ink: none;
   text-underline-offset: 3px;
 }
+
+/* ─── Sidebar Styles (Shadow DOM) ─────────────────────────
+   The actual sidebar styles are defined within sidebar.js
+   in the shadow DOM to avoid CSS conflicts with host pages.
+   These are just host-level styles if needed.
+*/
+
+#gsb-sidebar-host {
+  position: fixed;
+  z-index: 2147483644;
+}

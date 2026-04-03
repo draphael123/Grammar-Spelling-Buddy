@@ -245,7 +245,32 @@
   box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
 }
 
-/* Highlight word inline (for contenteditable) */
+/* ─── Contenteditable Floating Underlines ─────────────── */
+/* Positioned over error words without touching the editable DOM */
+.gsb-ce-overlay {
+  pointer-events: none;
+  z-index: 2147483640;
+}
+
+.gsb-ce-underline {
+  pointer-events: auto;
+}
+
+.gsb-ce-underline.spelling {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Cpath d='M0 2.5 Q1 0.5 2 2.5 Q3 4.5 4 2.5' fill='none' stroke='%23EF4444' stroke-width='1'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: center;
+  background-size: 4px 3px;
+}
+
+.gsb-ce-underline.grammar {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Cpath d='M0 2.5 Q1 0.5 2 2.5 Q3 4.5 4 2.5' fill='none' stroke='%233B82F6' stroke-width='1'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: center;
+  background-size: 4px 3px;
+}
+
+/* Legacy highlight classes (unused but kept for reference) */
 .gsb-highlight {
   position: relative;
   cursor: pointer;

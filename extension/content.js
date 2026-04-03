@@ -527,15 +527,115 @@
   }
 
   // ─── Rendering: ContentEditable ─────────────────────────
-  // For contenteditable, we can wrap error words in spans.
-  // This is a simplified approach — a production version would
-  // use a virtual overlay to avoid disrupting the DOM.
+  // ─── Contenteditable: Floating Underline Overlay ─────────
+  // Instead of modifying the editable DOM (which Gmail/Slack strip),
+  // we position tiny underline elements over each error word using
+  // Range.getBoundingClientRect(). Zero DOM disruption.
+
+  const ceOverlayMap = new WeakMap(); // element → { container, observer }
+
+  function getOrCreateCEOverlay(element) {
+    if (ceOverlayMap.has(element)) return ceOverlayMap.get(element);
+
+    const container = document.createElement("div");
+    container.className = "gsb-ce-overlay";
+    container.style.cssText = "position:absolute;top:0;left:0;width:0;height:0;pointer-events:none;z-index:2147483640;";
+    document.body.appendChild(container);
+
+    // Re-render on scroll or resize
+    const reposition = () => {
+      const issues = state.issueMap.get(element);
+      if (issues && issues.length > 0) renderCEUnderlines(element, issues);
+    };
+    element.addEventListener("scroll", reposition, { passive: true });
+    const ro = new ResizeObserver(reposition);
+    ro.observe(element);
+
+    const entry = { container, ro, reposition };
+    ceOverlayMap.set(element, entry);
+    return entry;
+  }
+
+  function renderCEUnderlines(element, issues) {
+    const entry = getOrCreateCEOverlay(element);
+    const container = entry.container;
+    container.innerHTML = "";
+
+    if (!issues || issues.length === 0) return;
+
+    // Walk text nodes to build a position→node map
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    let charOffset = 0;
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      textNodes.push({ node, start: charOffset, end: charOffset + node.length });
+      charOffset += node.length;
+    }
+
+    const elRect = element.getBoundingClientRect();
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
+    issues.forEach((issue) => {
+      // Find the text nodes that contain this issue's range
+      let startNode = null, startOffset = 0;
+      let endNode = null, endOffset = 0;
+
+      for (const tn of textNodes) {
+        if (!startNode && tn.end > issue.start) {
+          startNode = tn.node;
+          startOffset = issue.start - tn.start;
+        }
+        if (!endNode && tn.end >= issue.end) {
+          endNode = tn.node;
+          endOffset = issue.end - tn.start;
+          break;
+        }
+      }
+
+      if (!startNode || !endNode) return;
+
+      try {
+        const range = document.createRange();
+        range.setStart(startNode, startOffset);
+        range.setEnd(endNode, endOffset);
+
+        // A word can span multiple lines (wrapping), so get all client rects
+        const rects = range.getClientRects();
+        for (let r = 0; r < rects.length; r++) {
+          const rect = rects[r];
+          // Skip rects outside the element's visible area
+          if (rect.bottom < elRect.top || rect.top > elRect.bottom) continue;
+          if (rect.right < elRect.left || rect.left > elRect.right) continue;
+
+          const underline = document.createElement("div");
+          underline.className = "gsb-ce-underline " + (issue.type === "grammar" ? "grammar" : "spelling");
+          underline.style.cssText =
+            "position:absolute;" +
+            "left:" + (rect.left + scrollX) + "px;" +
+            "top:" + (rect.bottom + scrollY - 2) + "px;" +
+            "width:" + rect.width + "px;" +
+            "height:3px;" +
+            "pointer-events:auto;cursor:pointer;";
+
+          // Click to show tooltip
+          underline.addEventListener("click", (e) => {
+            e.stopPropagation();
+            showTooltip(issue, rect, element);
+          });
+
+          container.appendChild(underline);
+        }
+      } catch (e) {
+        // Range errors can happen with dynamic DOMs
+      }
+    });
+  }
 
   function renderContentEditableIssues(element, issues) {
-    // We'll use a click-based approach instead of wrapping spans
-    // to avoid disrupting the user's editing experience.
-    // Store issues on the element and handle via click events.
     state.issueMap.set(element, issues);
+    renderCEUnderlines(element, issues);
   }
 
   // ─── Click Handler for Issues ───────────────────────────

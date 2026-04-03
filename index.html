@@ -125,20 +125,42 @@
     .demo-dot.green { background: #10B981; }
     .demo-toolbar span { margin-left: 12px; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
     .demo-body { padding: 28px 32px; font-size: 1.05rem; line-height: 1.9; }
+    .demo-body .error-spelling,
+    .demo-body .error-grammar {
+      text-decoration-skip-ink: none; cursor: pointer; position: relative;
+      transition: all 0.3s ease;
+    }
     .demo-body .error-spelling {
       text-decoration: underline wavy var(--red-underline);
-      text-decoration-skip-ink: none; cursor: pointer; position: relative;
     }
     .demo-body .error-grammar {
       text-decoration: underline wavy var(--blue-underline);
-      text-decoration-skip-ink: none; cursor: pointer; position: relative;
+    }
+    .demo-body .error-spelling.fixed,
+    .demo-body .error-grammar.fixed {
+      text-decoration: none;
+      color: var(--accent);
+      background: var(--accent-light);
+      border-radius: 3px;
+      padding: 0 2px;
+      cursor: default;
     }
     .demo-body .tooltip {
-      display: none; position: absolute; bottom: calc(100% + 8px); left: 50%;
+      display: none; position: absolute; bottom: calc(100% + 10px); left: 50%;
       transform: translateX(-50%); background: #1E293B; color: #fff;
-      padding: 8px 14px; border-radius: 8px; font-size: 0.82rem;
+      padding: 10px 14px; border-radius: 8px; font-size: 0.82rem;
       white-space: nowrap; z-index: 10; font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
     }
+    .demo-body .tooltip .fix-label {
+      display: block; font-size: 0.72rem; color: #94A3B8; margin-bottom: 4px;
+    }
+    .demo-body .tooltip .fix-btn {
+      display: inline-block; background: var(--primary); color: #fff;
+      padding: 4px 12px; border-radius: 5px; font-weight: 600; font-size: 0.78rem;
+      margin-top: 4px; transition: background 0.15s;
+    }
+    .demo-body .tooltip .fix-btn:hover { background: var(--primary-dark); }
     .demo-body .tooltip::after {
       content: ''; position: absolute; top: 100%; left: 50%;
       transform: translateX(-50%); border: 6px solid transparent;
@@ -146,6 +168,7 @@
     }
     .demo-body .error-spelling:hover .tooltip,
     .demo-body .error-grammar:hover .tooltip { display: block; }
+    .demo-body .fixed .tooltip { display: none !important; }
     .demo-stats {
       display: flex; justify-content: space-between; padding: 14px 32px;
       background: var(--bg-alt); border-top: 1px solid var(--border);
@@ -246,6 +269,44 @@
     .faq-item.active .faq-answer { max-height: 200px; padding-top: 12px; }
     .faq-item.active .faq-arrow { transform: rotate(180deg); }
 
+    /* ---- DOWNLOAD & INSTALL ---- */
+    .download-box {
+      text-align: center; margin-bottom: 3rem;
+    }
+    .download-btn {
+      font-size: 1.05rem; padding: 16px 36px; border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(79,70,229,0.3);
+    }
+    .download-btn:hover {
+      box-shadow: 0 6px 24px rgba(79,70,229,0.4);
+    }
+    .download-note {
+      margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);
+    }
+    .install-steps {
+      max-width: 640px; margin: 0 auto;
+    }
+    .install-step {
+      display: flex; gap: 18px; margin-bottom: 1.5rem;
+      align-items: flex-start;
+    }
+    .install-num {
+      min-width: 36px; height: 36px; border-radius: 50%;
+      background: var(--primary); color: #fff; font-weight: 800;
+      font-size: 0.95rem; display: flex; align-items: center;
+      justify-content: center; margin-top: 2px;
+    }
+    .install-step h3 {
+      font-size: 1rem; font-weight: 700; margin-bottom: 4px;
+    }
+    .install-step p {
+      font-size: 0.92rem; color: var(--text-muted); line-height: 1.6;
+    }
+    .install-step code {
+      background: #E2E8F0; padding: 2px 6px; border-radius: 4px;
+      font-size: 0.85rem; font-family: 'SFMono-Regular', Consolas, monospace;
+    }
+
     /* ---- CTA ---- */
     .cta-section {
       text-align: center; padding: 80px 2rem;
@@ -290,7 +351,7 @@
         <a href="#how-it-works">How It Works</a>
         <a href="#compare">Compare</a>
         <a href="#faq">FAQ</a>
-        <a href="#download" class="btn btn-primary">Add to Chrome — Free</a>
+        <a href="#download" class="btn btn-primary">Download — Free</a>
       </div>
     </div>
   </nav>
@@ -303,8 +364,8 @@
     <p>A lightweight Chrome extension that catches spelling and grammar mistakes as you type — privately, instantly, and without the upsells.</p>
     <div class="hero-buttons">
       <a href="#download" class="btn btn-primary btn-large">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
-        Add to Chrome — It's Free
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download for Chrome — It's Free
       </a>
       <a href="#features" class="btn btn-outline btn-large">See Features</a>
     </div>
@@ -320,10 +381,10 @@
         <span>compose email — Gmail</span>
       </div>
       <div class="demo-body">
-        Hi team, I wanted to <span class="error-grammar">gave<span class="tooltip">&#9998; Did you mean "give"? (verb tense)</span></span> everyone a quick update on the project. We've made
-        <span class="error-spelling">signifcant<span class="tooltip">&#9998; significant</span></span> progress this week and the results
-        <span class="error-grammar">is<span class="tooltip">&#9998; "are" — subject-verb agreement</span></span> looking very promising. I'll send the full report
-        <span class="error-spelling">tommorrow<span class="tooltip">&#9998; tomorrow</span></span> morning.
+        Hi team, I wanted to <span class="error-grammar" data-fix="give">gave<span class="tooltip"><span class="fix-label">verb tense</span>&#9998; Did you mean "give"?<br><span class="fix-btn">Click to fix</span></span></span> everyone a quick update on the project. We've made
+        <span class="error-spelling" data-fix="significant">signifcant<span class="tooltip"><span class="fix-label">spelling</span>&#9998; significant<br><span class="fix-btn">Click to fix</span></span></span> progress this week and the results
+        <span class="error-grammar" data-fix="are">is<span class="tooltip"><span class="fix-label">subject-verb agreement</span>&#9998; "are"<br><span class="fix-btn">Click to fix</span></span></span> looking very promising. I'll send the full report
+        <span class="error-spelling" data-fix="tomorrow">tommorrow<span class="tooltip"><span class="fix-label">spelling</span>&#9998; tomorrow<br><span class="fix-btn">Click to fix</span></span></span> morning.
       </div>
       <div class="demo-stats">
         <span><span class="count">2</span> spelling errors</span>
@@ -533,13 +594,53 @@
     </div>
   </section>
 
+  <!-- DOWNLOAD & INSTALL -->
+  <section id="download" class="section-alt">
+    <div class="container">
+      <div class="section-header">
+        <h2>Download & Install</h2>
+        <p>Get Grammar & Spelling Buddy running in under a minute — no account needed.</p>
+      </div>
+      <div class="download-box">
+        <a href="https://github.com/draphael123/Grammar-Spelling-Buddy/archive/refs/heads/main.zip" class="btn btn-primary btn-large download-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Extension (.zip)
+        </a>
+        <p class="download-note">Free &middot; ~100 KB &middot; No sign-up required</p>
+      </div>
+      <div class="install-steps">
+        <div class="install-step">
+          <div class="install-num">1</div>
+          <div>
+            <h3>Download &amp; unzip</h3>
+            <p>Click the button above to download the .zip file. Unzip it anywhere on your computer — you'll see a folder called <code>extension</code> inside.</p>
+          </div>
+        </div>
+        <div class="install-step">
+          <div class="install-num">2</div>
+          <div>
+            <h3>Open Chrome Extensions</h3>
+            <p>In Chrome, go to <code>chrome://extensions</code> in your address bar. Then turn on <strong>Developer mode</strong> using the toggle in the top-right corner.</p>
+          </div>
+        </div>
+        <div class="install-step">
+          <div class="install-num">3</div>
+          <div>
+            <h3>Load the extension</h3>
+            <p>Click <strong>"Load unpacked"</strong> and select the <code>extension</code> folder you unzipped. The purple "G" icon will appear in your toolbar — you're all set!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- CTA -->
-  <section id="download" class="cta-section">
+  <section class="cta-section">
     <h2>Better writing starts now.</h2>
-    <p>Install Grammar & Spelling Buddy in seconds and write with confidence — no sign-up, no cost, no compromises.</p>
-    <a href="#" class="btn btn-white btn-large">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
-      Add to Chrome — It's Free
+    <p>No sign-up, no cost, no compromises. Just download and start writing with confidence.</p>
+    <a href="https://github.com/draphael123/Grammar-Spelling-Buddy/archive/refs/heads/main.zip" class="btn btn-white btn-large">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download Now — It's Free
     </a>
   </section>
 
@@ -582,6 +683,36 @@
         }
       });
     });
+
+    // Interactive demo: click-to-fix errors
+    document.querySelectorAll('.demo-body [data-fix]').forEach(span => {
+      span.addEventListener('click', () => {
+        if (span.classList.contains('fixed')) return;
+        const fix = span.dataset.fix;
+        const tooltip = span.querySelector('.tooltip');
+
+        // Animate the fix
+        span.classList.add('fixed');
+        span.textContent = fix;
+
+        // Update counters
+        updateDemoStats();
+      });
+    });
+
+    function updateDemoStats() {
+      const remaining = document.querySelectorAll('.demo-body [data-fix]:not(.fixed)');
+      const spellingLeft = document.querySelectorAll('.demo-body .error-spelling:not(.fixed)').length;
+      const grammarLeft = document.querySelectorAll('.demo-body .error-grammar:not(.fixed)').length;
+      const statSpans = document.querySelectorAll('.demo-stats > span');
+
+      statSpans[0].innerHTML = '<span class="count">' + spellingLeft + '</span> spelling error' + (spellingLeft !== 1 ? 's' : '');
+      statSpans[1].innerHTML = '<span class="count">' + grammarLeft + '</span> grammar issue' + (grammarLeft !== 1 ? 's' : '');
+
+      if (remaining.length === 0) {
+        statSpans[2].innerHTML = '<span class="count" style="color:#10B981">All clear!</span>';
+      }
+    }
   </script>
 
 </body>

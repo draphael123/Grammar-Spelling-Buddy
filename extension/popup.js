@@ -26,6 +26,29 @@
   const fleschGradeEl = document.getElementById("fleschGrade");
   const passiveVoicePercentEl = document.getElementById("passiveVoicePercent");
 
+  // Tab switching
+  const issuesTab = document.getElementById("issuesTab");
+  const statsTab = document.getElementById("statsTab");
+  const issuesContent = document.getElementById("issuesContent");
+  const statsContent = document.getElementById("statsContent");
+
+  function switchTab(tabName) {
+    if (tabName === "issues") {
+      issuesTab.classList.add("active");
+      statsTab.classList.remove("active");
+      issuesContent.style.display = "block";
+      statsContent.style.display = "none";
+    } else if (tabName === "stats") {
+      statsTab.classList.add("active");
+      issuesTab.classList.remove("active");
+      issuesContent.style.display = "none";
+      statsContent.style.display = "block";
+    }
+  }
+
+  issuesTab.addEventListener("click", () => switchTab("issues"));
+  statsTab.addEventListener("click", () => switchTab("stats"));
+
   // ─── Writing Stats Functions ────────────────────────────────
 
   /**
@@ -184,13 +207,13 @@
       enableToggle.checked = response.enabled;
 
       if (response.issueCount === 0) {
-        statsArea.style.display = "none";
-        noIssues.style.display = "block";
+        statsArea.classList.remove("active");
+        noIssues.classList.add("active");
         statusText.textContent = "All clear!";
         statusText.style.color = "#10B981";
       } else {
-        statsArea.style.display = "block";
-        noIssues.style.display = "none";
+        statsArea.classList.add("active");
+        noIssues.classList.remove("active");
         statusText.textContent = `${response.issueCount} issue${response.issueCount !== 1 ? "s" : ""} found`;
         statusText.style.color = "#F59E0B";
       }
@@ -231,13 +254,13 @@
     if (msg.type === "GSB_ISSUE_COUNT") {
       const count = msg.count || 0;
       if (count === 0) {
-        statsArea.style.display = "none";
-        noIssues.style.display = "block";
+        statsArea.classList.remove("active");
+        noIssues.classList.add("active");
         statusText.textContent = "All clear!";
         statusText.style.color = "#10B981";
       } else {
-        statsArea.style.display = "block";
-        noIssues.style.display = "none";
+        statsArea.classList.add("active");
+        noIssues.classList.remove("active");
         statusText.textContent = `${count} issue${count !== 1 ? "s" : ""} found`;
         statusText.style.color = "#F59E0B";
         // Update individual counts based on message data

@@ -23,6 +23,8 @@
       --primary-light: #EEF2FF;
       --accent: #10B981;
       --accent-light: #D1FAE5;
+      --cta: #F97316;
+      --cta-dark: #EA580C;
       --text: #1E293B;
       --text-muted: #64748B;
       --bg: #FFFFFF;
@@ -74,19 +76,19 @@
     .nav-links a:hover { color: var(--text); }
     .btn {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 22px; border-radius: 8px; font-weight: 600;
+      padding: 12px 22px; min-height: 44px; border-radius: 8px; font-weight: 600;
       font-size: 0.9rem; text-decoration: none; transition: all 0.2s;
       border: none; cursor: pointer;
     }
     .btn-primary {
-      background: var(--primary); color: #fff;
+      background: var(--cta); color: #fff;
     }
-    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .btn-primary:hover { background: var(--cta-dark); transform: translateY(-1px); box-shadow: var(--shadow-md); }
     .btn-outline {
       background: transparent; color: var(--primary); border: 2px solid var(--primary);
     }
     .btn-outline:hover { background: var(--primary-light); }
-    .btn-large { padding: 14px 32px; font-size: 1rem; border-radius: 10px; }
+    .btn-large { padding: 14px 32px; min-height: 48px; font-size: 1rem; border-radius: 10px; }
     .btn svg { width: 18px; height: 18px; }
 
     /* ---- HERO ---- */
@@ -97,7 +99,7 @@
     }
     .hero-badge {
       display: inline-flex; align-items: center; gap: 6px;
-      background: var(--accent-light); color: #065F46; font-size: 0.82rem;
+      background: #FEF3C7; color: #92400E; font-size: 0.82rem;
       font-weight: 600; padding: 6px 14px; border-radius: 50px; margin-bottom: 1.5rem;
     }
     .hero-badge span { font-size: 1rem; }
@@ -164,11 +166,11 @@
       display: block; font-size: 0.72rem; color: #94A3B8; margin-bottom: 4px;
     }
     .demo-body .tooltip .fix-btn {
-      display: inline-block; background: var(--primary); color: #fff;
-      padding: 4px 12px; border-radius: 5px; font-weight: 600; font-size: 0.78rem;
-      margin-top: 4px; transition: background 0.15s;
+      display: inline-block; background: var(--cta); color: #fff;
+      padding: 6px 14px; min-height: 32px; border-radius: 5px; font-weight: 600; font-size: 0.78rem;
+      margin-top: 4px; transition: background 0.15s; border: none; cursor: pointer; align-items: center; justify-content: center;
     }
-    .demo-body .tooltip .fix-btn:hover { background: var(--primary-dark); }
+    .demo-body .tooltip .fix-btn:hover { background: var(--cta-dark); }
     .demo-body .tooltip::after {
       content: ''; position: absolute; top: 100%; left: 50%;
       transform: translateX(-50%); border: 6px solid transparent;
@@ -208,14 +210,67 @@
 
     /* ---- TRY IT YOURSELF ---- */
     .try-it-section {
-      max-width: 720px; margin: 40px auto 0; padding: 32px;
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: 16px; box-shadow: var(--shadow-lg);
+      max-width: 720px; margin: 0 auto 80px; padding: 0;
     }
+
+    .try-it-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 16px; box-shadow: var(--shadow-lg); overflow: hidden;
+    }
+
+    .try-it-header {
+      background: var(--bg-alt); padding: 10px 16px;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .try-it-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .try-it-dot.red { background: #EF4444; }
+    .try-it-dot.yellow { background: #F59E0B; }
+    .try-it-dot.green { background: #10B981; }
+    .try-it-header span { margin-left: 12px; font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
 
     .try-it-section h2 {
       font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem;
       color: var(--text);
+    }
+
+    .try-it-body {
+      padding: 28px 32px; font-size: 1.05rem; line-height: 1.9;
+      min-height: 120px;
+    }
+
+    .try-it-body .error-spelling,
+    .try-it-body .error-grammar {
+      text-decoration-skip-ink: none; cursor: pointer; position: relative;
+      transition: all 0.3s ease;
+    }
+    .try-it-body .error-spelling {
+      text-decoration: underline wavy var(--red-underline);
+    }
+    .try-it-body .error-grammar {
+      text-decoration: underline wavy var(--blue-underline);
+    }
+    .try-it-body .error-spelling.fixed,
+    .try-it-body .error-grammar.fixed {
+      text-decoration: none;
+      color: var(--accent);
+      background: var(--accent-light);
+      border-radius: 3px;
+      padding: 0 2px;
+      cursor: default;
+    }
+
+    @keyframes typewriter {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+
+    .try-it-body.typing {
+      animation: typewriter 3s steps(120, end) 1 forwards;
+      overflow: hidden;
+      white-space: pre-wrap;
+      word-wrap: break-word;
     }
 
     .try-it-textarea {
@@ -226,6 +281,7 @@
       resize: vertical; margin-bottom: 16px;
       color: var(--text); background: var(--bg-alt);
       transition: border-color 0.2s, box-shadow 0.2s;
+      display: none;
     }
 
     .try-it-textarea:focus {
@@ -233,10 +289,14 @@
       box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
 
+    #hero-textarea {
+      display: none;
+    }
+
     .results-bar {
       display: flex; gap: 20px; padding: 14px 16px;
       background: var(--bg-alt); border-radius: 10px;
-      margin-bottom: 16px; font-size: 0.9rem;
+      margin: 14px 0 16px 0; font-size: 0.9rem;
     }
 
     .result-item {
@@ -244,7 +304,7 @@
     }
 
     .result-label { color: var(--text-muted); font-weight: 500; }
-    .result-count { color: var(--primary); font-weight: 700; font-size: 1.1rem; }
+    .result-count { color: var(--cta); font-weight: 700; font-size: 1.1rem; }
 
     .issues-list {
       max-height: 200px; overflow-y: auto;
@@ -266,12 +326,12 @@
     .issue-card.grammar .issue-error { color: var(--blue-underline); }
 
     .issue-fix-btn {
-      background: var(--primary); color: #fff; border: none;
-      padding: 6px 12px; border-radius: 5px; font-size: 0.8rem;
+      background: var(--cta); color: #fff; border: none;
+      padding: 8px 14px; min-height: 36px; border-radius: 5px; font-size: 0.8rem;
       font-weight: 600; cursor: pointer; transition: background 0.2s;
     }
 
-    .issue-fix-btn:hover { background: var(--primary-dark); }
+    .issue-fix-btn:hover { background: var(--cta-dark); }
 
     .no-issues {
       text-align: center; padding: 20px;
@@ -311,6 +371,64 @@
     .feature-icon.teal { background: #CCFBF1; }
     .feature-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
     .feature-card p { color: var(--text-muted); font-size: 0.92rem; }
+
+    /* ---- FEATURE ICON ANIMATIONS ---- */
+    @keyframes wiggle-write {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-2deg); }
+      75% { transform: rotate(2deg); }
+    }
+    @keyframes page-flip {
+      0%, 100% { transform: rotateY(0deg); }
+      50% { transform: rotateY(10deg); }
+    }
+    @keyframes lock-click {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(-5deg); }
+    }
+    @keyframes pulse-flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    @keyframes build-stack {
+      0%, 100% { transform: translateY(0px); }
+      33% { transform: translateY(-3px); }
+      66% { transform: translateY(0px); }
+    }
+    @keyframes float-levitate {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .feature-card:hover .feature-icon.purple {
+      animation: wiggle-write 0.4s ease-in-out;
+    }
+    .feature-card:hover .feature-icon.blue {
+      animation: page-flip 0.4s ease-in-out;
+    }
+    .feature-card:hover .feature-icon.green {
+      animation: lock-click 0.4s ease-in-out;
+    }
+    .feature-card:hover .feature-icon.orange {
+      animation: pulse-flash 0.4s ease-in-out;
+    }
+    .feature-card:hover .feature-icon.pink {
+      animation: build-stack 0.4s ease-in-out;
+    }
+    .feature-card:hover .feature-icon.teal {
+      animation: float-levitate 0.4s ease-in-out;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .feature-card:hover .feature-icon.purple,
+      .feature-card:hover .feature-icon.blue,
+      .feature-card:hover .feature-icon.green,
+      .feature-card:hover .feature-icon.orange,
+      .feature-card:hover .feature-icon.pink,
+      .feature-card:hover .feature-icon.teal {
+        animation: none;
+      }
+    }
 
     /* ---- HOW IT WORKS ---- */
     .steps {
@@ -377,11 +495,11 @@
       text-align: center; margin-bottom: 3rem;
     }
     .download-btn {
-      font-size: 1.05rem; padding: 16px 36px; border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(79,70,229,0.3);
+      font-size: 1.05rem; padding: 16px 36px; min-height: 48px; border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(249,115,22,0.3);
     }
     .download-btn:hover {
-      box-shadow: 0 6px 24px rgba(79,70,229,0.4);
+      box-shadow: 0 6px 24px rgba(249,115,22,0.4);
     }
     .download-note {
       margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);
@@ -465,7 +583,31 @@
     <div class="hero-badge"><span>&#10003;</span> 100% Free — No account required</div>
     <h1>Write with confidence.<br><span class="highlight">No bloat. No cost.</span></h1>
     <p>A lightweight Chrome extension that catches spelling and grammar mistakes as you type — privately, instantly, and without the upsells.</p>
-    <div class="hero-buttons">
+
+    <!-- INTERACTIVE HERO DEMO -->
+    <div class="try-it-section" style="margin-top: 3rem;">
+      <div class="try-it-card">
+        <div class="try-it-header">
+          <div class="try-it-dot red"></div>
+          <div class="try-it-dot yellow"></div>
+          <div class="try-it-dot green"></div>
+          <span>Try it yourself</span>
+        </div>
+        <div class="try-it-body" id="hero-demo-body">Hi team, I wanted to gave everyone a quick update on the project. We've made signifcant progress this week and the results is looking very promising. I'll send the full report tommorrow morning.</div>
+      </div>
+      <div class="results-bar">
+        <div class="result-item">
+          <span class="result-label">Spelling errors:</span>
+          <span class="result-count" id="hero-spelling-count">0</span>
+        </div>
+        <div class="result-item">
+          <span class="result-label">Grammar issues:</span>
+          <span class="result-count" id="hero-grammar-count">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-buttons" style="margin-top: 2rem;">
       <a href="#download" class="btn btn-primary btn-large">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Download for Chrome — It's Free
@@ -474,45 +616,6 @@
     </div>
   </section>
 
-  <!-- LIVE DEMO PREVIEW -->
-  <div class="demo-section">
-    <div class="demo-card">
-      <div class="demo-toolbar">
-        <div class="demo-dot red"></div>
-        <div class="demo-dot yellow"></div>
-        <div class="demo-dot green"></div>
-        <span>compose email — Gmail</span>
-      </div>
-      <div class="demo-body">
-        Hi team, I wanted to <span class="error-grammar" data-fix="give" id="first-error">gave<span class="click-to-fix-label">Click to fix →</span><span class="tooltip"><span class="fix-label">verb tense</span>&#9998; Did you mean "give"?<br><span class="fix-btn">Click to fix</span></span></span> everyone a quick update on the project. We've made
-        <span class="error-spelling" data-fix="significant">signifcant<span class="tooltip"><span class="fix-label">spelling</span>&#9998; significant<br><span class="fix-btn">Click to fix</span></span></span> progress this week and the results
-        <span class="error-grammar" data-fix="are">is<span class="tooltip"><span class="fix-label">subject-verb agreement</span>&#9998; "are"<br><span class="fix-btn">Click to fix</span></span></span> looking very promising. I'll send the full report
-        <span class="error-spelling" data-fix="tomorrow">tommorrow<span class="tooltip"><span class="fix-label">spelling</span>&#9998; tomorrow<br><span class="fix-btn">Click to fix</span></span></span> morning.
-      </div>
-      <div class="demo-stats">
-        <span><span class="count">2</span> spelling errors</span>
-        <span><span class="count">2</span> grammar issues</span>
-        <span>Checked in <span class="count">&lt;1s</span></span>
-      </div>
-    </div>
-        <div class="try-it-section">
-      <h2>Try it yourself</h2>
-      <textarea class="try-it-textarea" id="try-it-textarea" placeholder="Type or paste text here to see live checking...">Hi team, I wanted to gave everyone a quick update. We've made signifcant progress and the results is looking very promising.</textarea>
-      <div class="results-bar">
-        <div class="result-item">
-          <span class="result-label">Spelling errors:</span>
-          <span class="result-count" id="spelling-count">0</span>
-        </div>
-        <div class="result-item">
-          <span class="result-label">Grammar issues:</span>
-          <span class="result-count" id="grammar-count">0</span>
-        </div>
-      </div>
-      <div class="issues-list" id="issues-list">
-        <div class="no-issues">No issues found</div>
-      </div>
-    </div>
-  </div>
 
   <!-- FEATURES -->
   <section id="features" class="section-alt">
@@ -785,13 +888,66 @@
 
   <!-- FAQ TOGGLE SCRIPT -->
   <script>
-    // Pulse animation on first error on page load
+    // Typing animation for hero demo
+    const fullText = "Hi team, I wanted to gave everyone a quick update on the project. We've made signifcant progress this week and the results is looking very promising. I'll send the full report tommorrow morning.";
+    const errors = [
+      { word: 'gave', start: 31, end: 35, fix: 'give', type: 'grammar', label: 'verb tense' },
+      { word: 'signifcant', start: 90, end: 100, fix: 'significant', type: 'spelling' },
+      { word: 'is', start: 175, end: 177, fix: 'are', type: 'grammar', label: 'subject-verb agreement' },
+      { word: 'tommorrow', start: 232, end: 241, fix: 'tomorrow', type: 'spelling' }
+    ];
+
+    function initHeroDemo() {
+      const body = document.getElementById('hero-demo-body');
+      const text = body.textContent.trim();
+
+      // Build HTML with errors highlighted
+      let html = '';
+      let lastIndex = 0;
+
+      errors.forEach(error => {
+        html += text.substring(lastIndex, error.start);
+        const errorClass = error.type === 'grammar' ? 'error-grammar' : 'error-spelling';
+        html += `<span class="${errorClass}" data-fix="${error.fix}">${error.word}</span>`;
+        lastIndex = error.end;
+      });
+      html += text.substring(lastIndex);
+
+      body.innerHTML = html;
+
+      // Add click handlers to errors
+      body.querySelectorAll('[data-fix]').forEach(span => {
+        span.addEventListener('click', () => {
+          if (span.classList.contains('fixed')) return;
+          span.classList.add('fixed');
+          span.textContent = span.dataset.fix;
+          updateHeroDemoStats();
+        });
+      });
+
+      updateHeroDemoStats();
+    }
+
+    function updateHeroDemoStats() {
+      const remaining = document.querySelectorAll('#hero-demo-body [data-fix]:not(.fixed)');
+      const spellingLeft = document.querySelectorAll('#hero-demo-body .error-spelling:not(.fixed)').length;
+      const grammarLeft = document.querySelectorAll('#hero-demo-body .error-grammar:not(.fixed)').length;
+
+      document.getElementById('hero-spelling-count').textContent = spellingLeft;
+      document.getElementById('hero-grammar-count').textContent = grammarLeft;
+    }
+
+    // Initialize hero demo when page loads
     window.addEventListener('load', () => {
-      const firstError = document.getElementById('first-error');
-      if (firstError) {
-        firstError.classList.add('pulse-3x');
-      }
+      initHeroDemo();
     });
+
+    // Fallback in case load event already fired
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initHeroDemo);
+    } else {
+      initHeroDemo();
+    }
 
     // Simple spell checker and grammar checker
     const commonWords = new Set([
@@ -962,23 +1118,26 @@
       });
     }
 
-    // Debounced checker
-    let checkTimeout;
-    document.getElementById('try-it-textarea').addEventListener('input', () => {
-      clearTimeout(checkTimeout);
-      checkTimeout = setTimeout(() => {
-        const text = document.getElementById('try-it-textarea').value;
+    // Keep old try-it textarea code in case it's used elsewhere
+    const tryItTextarea = document.getElementById('try-it-textarea');
+    if (tryItTextarea) {
+      let checkTimeout;
+      tryItTextarea.addEventListener('input', () => {
+        clearTimeout(checkTimeout);
+        checkTimeout = setTimeout(() => {
+          const text = tryItTextarea.value;
+          const issues = checkText(text);
+          renderIssues(issues);
+        }, 300);
+      });
+
+      // Initial check on load
+      window.addEventListener('load', () => {
+        const text = tryItTextarea.value;
         const issues = checkText(text);
         renderIssues(issues);
-      }, 300);
-    });
-
-    // Initial check on load
-    window.addEventListener('load', () => {
-      const text = document.getElementById('try-it-textarea').value;
-      const issues = checkText(text);
-      renderIssues(issues);
-    });
+      });
+    }
 
     document.querySelectorAll('.faq-question').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1011,35 +1170,6 @@
       });
     });
 
-    // Interactive demo: click-to-fix errors
-    document.querySelectorAll('.demo-body [data-fix]').forEach(span => {
-      span.addEventListener('click', () => {
-        if (span.classList.contains('fixed')) return;
-        const fix = span.dataset.fix;
-        const tooltip = span.querySelector('.tooltip');
-
-        // Animate the fix
-        span.classList.add('fixed');
-        span.textContent = fix;
-
-        // Update counters
-        updateDemoStats();
-      });
-    });
-
-    function updateDemoStats() {
-      const remaining = document.querySelectorAll('.demo-body [data-fix]:not(.fixed)');
-      const spellingLeft = document.querySelectorAll('.demo-body .error-spelling:not(.fixed)').length;
-      const grammarLeft = document.querySelectorAll('.demo-body .error-grammar:not(.fixed)').length;
-      const statSpans = document.querySelectorAll('.demo-stats > span');
-
-      statSpans[0].innerHTML = '<span class="count">' + spellingLeft + '</span> spelling error' + (spellingLeft !== 1 ? 's' : '');
-      statSpans[1].innerHTML = '<span class="count">' + grammarLeft + '</span> grammar issue' + (grammarLeft !== 1 ? 's' : '');
-
-      if (remaining.length === 0) {
-        statSpans[2].innerHTML = '<span class="count" style="color:#10B981">All clear!</span>';
-      }
-    }
   </script>
 
 </body>

@@ -14,6 +14,12 @@
     allIssues: [], // Flattened list of all issues from all elements
     ignoredIssueKeys: new Set(), // Track ignored issues by key
     shadowRoot: null,
+    pillPosition: "bottom-left", // Default position for toggle button
+    isDragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    undoSnapshot: null, // For Fix All undo functionality
+    toastTimer: null,
   };
 
   // ─── Sidebar Container ───────────────────────────────────
@@ -45,7 +51,7 @@
       .gsb-toggle-button {
         position: fixed;
         bottom: 24px;
-        right: 24px;
+        left: 24px;
         z-index: 2147483646;
         width: 56px;
         height: 56px;
@@ -53,7 +59,7 @@
         background: var(--gsb-purple);
         color: #fff;
         border: none;
-        cursor: pointer;
+        cursor: grab;
         font-weight: 600;
         font-size: 14px;
         display: flex;
@@ -63,6 +69,24 @@
         box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
         transition: all 0.25s ease;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        user-select: none;
+        touch-action: none;
+      }
+
+      .gsb-toggle-button.dragging {
+        cursor: grabbing;
+        opacity: 0.9;
+      }
+
+      @keyframes gsb-jiggle {
+        0%, 100% { transform: translateX(0) rotate(0deg); }
+        25% { transform: translateX(-3px) rotate(-1deg); }
+        50% { transform: translateX(3px) rotate(1deg); }
+        75% { transform: translateX(-3px) rotate(-1deg); }
+      }
+
+      .gsb-toggle-button.first-use {
+        animation: gsb-jiggle 0.6s ease-in-out 1;
       }
 
       .gsb-toggle-button:hover {
@@ -213,6 +237,7 @@
         color: #94A3B8;
         text-align: center;
         padding: 24px;
+        position: relative;
       }
 
       .gsb-sidebar-empty-icon {
@@ -230,6 +255,39 @@
         color: #64748B;
       }
 
+      .gsb-sidebar-empty.celebrating {
+        animation: gsb-celebration-pulse 0.5s ease-out;
+      }
+
+      @keyframes gsb-celebration-pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+      }
+
+      @keyframes gsb-confetti-fall {
+        0% {
+          transform: translate(0, -10px) rotate(0deg) scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(var(--tx), 300px) rotate(360deg) scale(0);
+          opacity: 0;
+        }
+      }
+
+      .gsb-confetti {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        pointer-events: none;
+        animation: gsb-confetti-fall 1.5s ease-out forwards;
+      }
+
+      .gsb-confetti.purple { background: #8B5CF6; }
+      .gsb-confetti.green { background: #10B981; }
+      .gsb-confetti.blue { background: #3B82F6; }
+
       /* Issue card */
       .gsb-issue-card {
         background: #0F172A;
@@ -240,11 +298,48 @@
         flex-direction: column;
         gap: 8px;
         transition: all 0.2s;
+        position: relative;
       }
 
       .gsb-issue-card:hover {
         border-color: #475569;
         background: #1E293B;
+      }
+
+      @keyframes gsb-card-slide-out {
+        0% {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        100% {
+          transform: translateX(-100%);
+          opacity: 0;
+        }
+      }
+
+      @keyframes gsb-checkmark-appear {
+        0% {
+          transform: scale(0);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1.5);
+          opacity: 0;
+        }
+      }
+
+      .gsb-issue-card.sliding-out {
+        animation: gsb-card-slide-out 0.2s ease-out forwards;
+      }
+
+      .gsb-checkmark-overlay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 32px;
+        color: #10B981;
+        animation: gsb-checkmark-appear 0.3s ease-out forwards;
       }
 
       /* Issue type badge */
@@ -276,7 +371,7 @@
         color: #C4B5FD;
       }
 
-      /* Issue context */
+      /* Issue context with inline correction preview */
       .gsb-issue-context {
         font-size: 12px;
         color: #CBD5E1;
@@ -284,11 +379,28 @@
       }
 
       .gsb-issue-word {
-        background: rgba(239, 68, 68, 0.15);
+        text-decoration: line-through;
         color: #FCA5A5;
         padding: 0 3px;
         border-radius: 2px;
         font-weight: 500;
+      }
+
+      .gsb-issue-word.spelling {
+        color: #EF4444;
+      }
+
+      .gsb-issue-word.grammar {
+        color: #3B82F6;
+      }
+
+      .gsb-issue-correction {
+        color: #10B981;
+        font-weight: 600;
+        background: rgba(16, 185, 129, 0.15);
+        padding: 0 3px;
+        border-radius: 2px;
+        margin: 0 2px;
       }
 
       /* Suggestion */
@@ -360,6 +472,87 @@
       .gsb-sidebar-backdrop.open {
         background: rgba(0, 0, 0, 0.3);
         pointer-events: auto;
+      }
+
+      /* Toast notification */
+      .gsb-toast {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #1E293B;
+        border-top: 1px solid var(--gsb-border);
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: #fff;
+        font-size: 13px;
+        z-index: 2147483645;
+        animation: gsb-toast-slide-in 0.3s ease-out;
+      }
+
+      .gsb-toast.fading {
+        animation: gsb-toast-slide-out 0.3s ease-out forwards;
+      }
+
+      @keyframes gsb-toast-slide-in {
+        from {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes gsb-toast-slide-out {
+        from {
+          transform: translateY(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+      }
+
+      .gsb-toast-message {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .gsb-toast-timer {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid var(--gsb-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        color: #94A3B8;
+      }
+
+      .gsb-toast-undo {
+        background: var(--gsb-purple);
+        color: #fff;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 12px;
+        transition: background 0.2s;
+        flex-shrink: 0;
+      }
+
+      .gsb-toast-undo:hover {
+        background: #7C3AED;
       }
     `;
     shadowRoot.appendChild(style);
@@ -450,16 +643,25 @@
     card.setAttribute("data-issue-index", index);
 
     const typeClass = issue.type || "spelling";
-    const suggestion = issue.suggestion ? `<strong class="gsb-issue-suggestion-label">Suggestion:</strong> ${escapeHtmlInShadow(issue.suggestion)}` : "No suggestion available";
+
+    // Build inline correction preview with strikethrough and bold suggestion
+    let contextHtml = "";
+    if (context.before) {
+      contextHtml += `<span>${escapeHtmlInShadow(context.before)} </span>`;
+    }
+    contextHtml += `<span class="gsb-issue-word ${typeClass}">${escapeHtmlInShadow(context.original)}</span>`;
+    if (issue.suggestion) {
+      contextHtml += ` <span class="gsb-issue-correction">${escapeHtmlInShadow(issue.suggestion)}</span>`;
+    }
+    if (context.after) {
+      contextHtml += `<span> ${escapeHtmlInShadow(context.after)}</span>`;
+    }
 
     card.innerHTML = `
       <div class="gsb-issue-badge ${typeClass}">${typeClass}</div>
       <div class="gsb-issue-context">
-        ${context.before ? `<span>${escapeHtmlInShadow(context.before)} </span>` : ""}
-        <span class="gsb-issue-word">${escapeHtmlInShadow(context.original)}</span>
-        ${context.after ? `<span> ${escapeHtmlInShadow(context.after)}</span>` : ""}
+        ${contextHtml}
       </div>
-      <div class="gsb-issue-suggestion">${suggestion}</div>
       <div class="gsb-issue-actions">
         <button class="gsb-issue-fix-btn" data-action="fix">Fix</button>
         <button class="gsb-issue-ignore-btn" data-action="ignore">Ignore</button>
@@ -492,9 +694,21 @@
     if (typeof window.__gsbApplyFix === "function") {
       window.__gsbApplyFix(element, issue);
     }
-    // Remove card from sidebar
-    card.remove();
-    refreshSidebar();
+
+    // Animate card slide-out with checkmark
+    card.classList.add("sliding-out");
+
+    // Create and animate checkmark
+    const checkmark = document.createElement("div");
+    checkmark.className = "gsb-checkmark-overlay";
+    checkmark.textContent = "✓";
+    card.appendChild(checkmark);
+
+    // Remove card after animation completes
+    setTimeout(() => {
+      card.remove();
+      refreshSidebar();
+    }, 200);
   }
 
   // ─── Handle Ignore Issue ────────────────────────────────
@@ -538,14 +752,20 @@
     issuesList.innerHTML = "";
 
     if (allIssues.length === 0) {
-      // Show empty state
+      // Show empty state with celebration
       issuesList.innerHTML = `
-        <div class="gsb-sidebar-empty">
+        <div class="gsb-sidebar-empty celebrating">
           <div class="gsb-sidebar-empty-icon">✓</div>
           <div class="gsb-sidebar-empty-title">All clear!</div>
           <div class="gsb-sidebar-empty-text">No issues found on this page</div>
         </div>
       `;
+
+      // Create confetti burst
+      const emptyContainer = issuesList.querySelector(".gsb-sidebar-empty");
+      setTimeout(() => {
+        createConfetti(emptyContainer);
+      }, 100);
     } else {
       // Render all issue cards
       allIssues.forEach((item, index) => {
@@ -555,10 +775,54 @@
     }
   }
 
+  // ─── Create Confetti Animation ───────────────────────────
+
+  function createConfetti(container) {
+    const colors = ["purple", "green", "blue"];
+    const particleCount = 25;
+
+    for (let i = 0; i < particleCount; i++) {
+      const confetti = document.createElement("div");
+      confetti.className = `gsb-confetti ${colors[Math.floor(Math.random() * colors.length)]}`;
+
+      // Random horizontal displacement
+      const tx = (Math.random() - 0.5) * 200;
+      confetti.style.setProperty("--tx", `${tx}px`);
+      confetti.style.left = "50%";
+      confetti.style.top = "50%";
+      confetti.style.marginLeft = "-5px";
+      confetti.style.marginTop = "-5px";
+
+      container.appendChild(confetti);
+
+      // Remove after animation completes
+      setTimeout(() => {
+        confetti.remove();
+      }, 1500);
+    }
+  }
+
   // ─── Handle Fix All ──────────────────────────────────────
 
   function handleFixAll() {
     const issues = [...state.shadowRoot.querySelectorAll(".gsb-issue-card")];
+    const issueCount = issues.length;
+
+    // Save snapshot before applying fixes (for undo)
+    state.undoSnapshot = [];
+    for (const card of issues) {
+      const element = card._element;
+      let originalText = "";
+      if (element.tagName === "TEXTAREA" || element.tagName === "INPUT") {
+        originalText = element.value;
+      } else if (element.isContentEditable) {
+        originalText = element.innerText;
+      }
+      state.undoSnapshot.push({
+        element,
+        originalText,
+      });
+    }
 
     // Apply fixes in reverse order to preserve positions
     for (let i = issues.length - 1; i >= 0; i--) {
@@ -571,6 +835,77 @@
       }
     }
 
+    refreshSidebar();
+
+    // Show undo toast
+    showUndoToast(issueCount);
+  }
+
+  // ─── Show Undo Toast ────────────────────────────────────
+
+  function showUndoToast(issueCount) {
+    // Remove any existing toast
+    const existingToast = state.shadowRoot.querySelector(".gsb-toast");
+    if (existingToast) existingToast.remove();
+
+    const panel = state.shadowRoot.querySelector(".gsb-sidebar-panel");
+    const toast = document.createElement("div");
+    toast.className = "gsb-toast";
+
+    let countdown = 3;
+    toast.innerHTML = `
+      <div class="gsb-toast-message">
+        Fixed ${issueCount} issue${issueCount > 1 ? "s" : ""}. <span class="gsb-toast-timer">${countdown}</span>
+      </div>
+      <button class="gsb-toast-undo">Undo</button>
+    `;
+
+    panel.appendChild(toast);
+
+    // Handle undo button click
+    const undoBtn = toast.querySelector(".gsb-toast-undo");
+    undoBtn.addEventListener("click", () => {
+      handleUndo();
+      toast.remove();
+    });
+
+    // Countdown timer
+    const timerEl = toast.querySelector(".gsb-toast-timer");
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      if (countdown > 0) {
+        timerEl.textContent = countdown;
+      } else {
+        clearInterval(countdownInterval);
+        // Auto-fade out toast
+        toast.classList.add("fading");
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }
+    }, 1000);
+
+    state.toastTimer = countdownInterval;
+  }
+
+  // ─── Handle Undo ────────────────────────────────────────
+
+  function handleUndo() {
+    if (!state.undoSnapshot || state.undoSnapshot.length === 0) return;
+
+    // Restore all element text from snapshot
+    for (const item of state.undoSnapshot) {
+      const element = item.element;
+      if (element.tagName === "TEXTAREA" || element.tagName === "INPUT") {
+        element.value = item.originalText;
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+      } else if (element.isContentEditable) {
+        element.innerText = item.originalText;
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+
+    state.undoSnapshot = null;
     refreshSidebar();
   }
 
@@ -607,6 +942,120 @@
     return div.innerHTML;
   }
 
+  // ─── Drag Handler for Toggle Button ─────────────────────
+
+  function setupToggleDrag() {
+    const toggleBtn = state.shadowRoot.querySelector(".gsb-toggle-button");
+    if (!toggleBtn) return;
+
+    // Load saved position from storage
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.sync.get(["gsbTogglePillPosition"], (data) => {
+        if (data.gsbTogglePillPosition) {
+          state.pillPosition = data.gsbTogglePillPosition;
+          applyPillPosition(toggleBtn);
+        } else {
+          // Show jiggle animation on first use
+          toggleBtn.classList.add("first-use");
+        }
+      });
+    } else {
+      // Fallback for environments without chrome.storage
+      toggleBtn.classList.add("first-use");
+    }
+
+    let startX, startY, currentX = 0, currentY = 0;
+
+    // Mouse events
+    toggleBtn.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return; // Only left mouse button
+      state.isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      toggleBtn.classList.add("dragging");
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!state.isDragging) return;
+      currentX = e.clientX;
+      currentY = e.clientY;
+    });
+
+    document.addEventListener("mouseup", (e) => {
+      if (!state.isDragging) return;
+      state.isDragging = false;
+      toggleBtn.classList.remove("dragging");
+      handleToggleDrop(toggleBtn, currentX, currentY);
+    });
+
+    // Touch events
+    toggleBtn.addEventListener("touchstart", (e) => {
+      state.isDragging = true;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      toggleBtn.classList.add("dragging");
+    });
+
+    document.addEventListener("touchmove", (e) => {
+      if (!state.isDragging) return;
+      currentX = e.touches[0].clientX;
+      currentY = e.touches[0].clientY;
+    });
+
+    document.addEventListener("touchend", (e) => {
+      if (!state.isDragging) return;
+      state.isDragging = false;
+      toggleBtn.classList.remove("dragging");
+      handleToggleDrop(toggleBtn, currentX, currentY);
+    });
+  }
+
+  function handleToggleDrop(toggleBtn, x, y) {
+    // Determine which edge the pill is closest to
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    const distLeft = x;
+    const distRight = windowWidth - x;
+    const distTop = y;
+    const distBottom = windowHeight - y;
+
+    const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+    let newPosition = state.pillPosition;
+    if (minDist === distLeft) {
+      newPosition = "bottom-left";
+    } else if (minDist === distRight) {
+      newPosition = "bottom-right";
+    }
+    // For now, we only snap to left/right edges (not top)
+
+    state.pillPosition = newPosition;
+
+    // Save to storage
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.sync.set({ gsbTogglePillPosition: newPosition });
+    }
+
+    applyPillPosition(toggleBtn);
+  }
+
+  function applyPillPosition(toggleBtn) {
+    // Reset all position classes
+    toggleBtn.style.left = "";
+    toggleBtn.style.right = "";
+    toggleBtn.style.bottom = "";
+    toggleBtn.style.top = "";
+
+    if (state.pillPosition === "bottom-left") {
+      toggleBtn.style.bottom = "24px";
+      toggleBtn.style.left = "24px";
+    } else if (state.pillPosition === "bottom-right") {
+      toggleBtn.style.bottom = "24px";
+      toggleBtn.style.right = "24px";
+    }
+  }
+
   // ─── Initialize Sidebar ─────────────────────────────────
 
   function initSidebar() {
@@ -618,8 +1067,15 @@
     const fixAllBtn = state.shadowRoot.querySelector(".gsb-sidebar-fix-all");
     const backdrop = state.shadowRoot.querySelector(".gsb-sidebar-backdrop");
 
-    // Toggle button click
-    toggleBtn.addEventListener("click", toggleSidebar);
+    // Setup drag functionality for toggle button
+    setupToggleDrag();
+
+    // Toggle button click (only if not dragging)
+    toggleBtn.addEventListener("click", (e) => {
+      if (!state.isDragging) {
+        toggleSidebar();
+      }
+    });
 
     // Close button click
     closeBtn.addEventListener("click", closeSidebar);

@@ -197,17 +197,17 @@
     tip.className = "gsb-tooltip";
     tip.setAttribute("role", "tooltip");
     tip.setAttribute("aria-live", "polite");
+
+    let buttonsHtml = `<div>`;
+    if (issue.suggestion) {
+      buttonsHtml += `<button class="gsb-tooltip-suggestion" data-action="fix">Apply: ${escapeHtml(issue.suggestion)}</button>`;
+    }
+    buttonsHtml += `<button class="gsb-dismiss" data-action="dismiss">Ignore</button></div>`;
+
     tip.innerHTML = `
       <div class="gsb-tooltip-type ${issue.type}">${issue.type}</div>
       <div class="gsb-tooltip-message">${escapeHtml(issue.message)}</div>
-      <div>
-        ${
-          issue.suggestion
-            ? `<button class="gsb-tooltip-suggestion" data-action="fix">Apply: ${escapeHtml(issue.suggestion)}</button>`
-            : ""
-        }
-        <button class="gsb-tooltip-dismiss" data-action="dismiss">Ignore</button>
-      </div>
+      ${buttonsHtml}
     `;
 
     // Position above the word

@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       width: 300px;
       background: #FFFFFF;
       color: #1E293B;
@@ -14,6 +17,12 @@
     .header {
       background: linear-gradient(135deg, #4F46E5, #7C3AED);
       padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .header-left {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -31,39 +40,68 @@
     .header p {
       color: rgba(255,255,255,0.7); font-size: 11px;
     }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-version {
+      color: rgba(255,255,255,0.7); font-size: 10px; font-weight: 500;
+    }
 
-    .status-bar {
-      display: flex; align-items: center; justify-content: space-between;
+    /* Tab bar */
+    .tab-bar {
+      display: flex;
       padding: 12px 18px;
+      gap: 8px;
       border-bottom: 1px solid #E2E8F0;
     }
-    .status-bar .label {
-      font-size: 13px; font-weight: 500; color: #64748B;
+    .tab-button {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      background: #F1F5F9;
+      color: #64748B;
+      transition: all 0.2s ease;
+    }
+    .tab-button.active {
+      background: #4F46E5;
+      color: #fff;
+    }
+    .tab-button:hover:not(.active) {
+      background: #E2E8F0;
     }
 
-    /* Toggle switch */
+    /* Toggle switch - larger for header */
     .toggle {
       position: relative;
-      width: 44px; height: 24px;
+      width: 48px; height: 26px;
     }
     .toggle input { opacity: 0; width: 0; height: 0; }
     .toggle .slider {
       position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-      background: #CBD5E1; border-radius: 12px; cursor: pointer;
+      background: rgba(255,255,255,0.3); border-radius: 13px; cursor: pointer;
       transition: background 0.2s;
     }
     .toggle .slider::before {
       content: '';
       position: absolute; top: 2px; left: 2px;
-      width: 20px; height: 20px; background: #fff;
+      width: 22px; height: 22px; background: #fff;
       border-radius: 50%; transition: transform 0.2s;
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     }
-    .toggle input:checked + .slider { background: #4F46E5; }
-    .toggle input:checked + .slider::before { transform: translateX(20px); }
+    .toggle input:checked + .slider { background: rgba(255,255,255,0.5); }
+    .toggle input:checked + .slider::before { transform: translateX(22px); }
 
     .stats {
       padding: 16px 18px;
+      display: none;
+    }
+    .stats.active {
+      display: block;
     }
     .stat-row {
       display: flex; align-items: center; justify-content: space-between;
@@ -84,6 +122,7 @@
     .stat-dot.green { background: #10B981; }
     .stat-value {
       font-size: 14px; font-weight: 700; color: #1E293B;
+      font-variant-numeric: tabular-nums;
     }
 
     .site-info {
@@ -97,27 +136,57 @@
     }
 
     .footer {
-      padding: 10px 18px;
+      padding: 12px 18px;
       border-top: 1px solid #E2E8F0;
       text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #94A3B8;
+    }
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .footer a {
       font-size: 11px; color: #4F46E5; text-decoration: none;
       font-weight: 500;
     }
     .footer a:hover { text-decoration: underline; }
+    .footer-watermark {
+      font-size: 9px;
+      color: #CBD5E1;
+      letter-spacing: 0.5px;
+    }
 
     .no-issues {
-      text-align: center; padding: 20px 18px;
+      text-align: center; padding: 32px 18px;
+      display: none;
+    }
+    .no-issues.active {
+      display: block;
     }
     .no-issues .check-icon {
-      width: 40px; height: 40px; border-radius: 50%;
+      width: 60px; height: 60px; border-radius: 50%;
       background: #D1FAE5; color: #10B981;
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 8px; font-size: 20px;
+      margin: 0 auto 12px; font-size: 36px;
+      animation: scaleIn 0.4s ease-out;
+    }
+    @keyframes scaleIn {
+      from {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
     }
     .no-issues p {
-      font-size: 13px; color: #64748B;
+      font-size: 14px; color: #64748B; font-weight: 500;
     }
 
     .divider {
@@ -126,6 +195,10 @@
 
     .writing-stats {
       padding: 16px 18px;
+      display: none;
+    }
+    .writing-stats.active {
+      display: block;
     }
     .writing-stats .stat-row {
       display: flex; align-items: center; justify-content: space-between;
@@ -139,6 +212,7 @@
     }
     .writing-stats .stat-value {
       font-size: 14px; font-weight: 700; color: #1E293B;
+      font-variant-numeric: tabular-nums;
     }
     .readability-badge {
       display: inline-block;
@@ -156,71 +230,80 @@
 </head>
 <body>
   <div class="header">
-    <div class="header-icon">G</div>
-    <div>
-      <h1>Grammar & Spelling Buddy</h1>
-      <p>v1.0.0 — Free forever</p>
+    <div class="header-left">
+      <div class="header-icon">G</div>
+      <div>
+        <h1>Grammar & Spelling Buddy</h1>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="header-version">v1.0.0</span>
+      <label class="toggle">
+        <input type="checkbox" id="enableToggle" checked>
+        <span class="slider"></span>
+      </label>
     </div>
   </div>
 
-  <div class="status-bar">
-    <span class="label">Extension active</span>
-    <label class="toggle">
-      <input type="checkbox" id="enableToggle" checked>
-      <span class="slider"></span>
-    </label>
+  <div class="tab-bar">
+    <button class="tab-button active" id="issuesTab" data-tab="issues">Issues</button>
+    <button class="tab-button" id="statsTab" data-tab="stats">Stats</button>
   </div>
 
-  <div id="statsArea" class="stats">
-    <div class="stat-row">
-      <span class="stat-label"><span class="stat-dot red"></span> Spelling errors</span>
-      <span class="stat-value" id="spellingCount">0</span>
+  <!-- Issues Tab Content -->
+  <div id="issuesContent">
+    <div id="statsArea" class="stats active">
+      <div class="stat-row">
+        <span class="stat-label"><span class="stat-dot red"></span> Spelling errors</span>
+        <span class="stat-value" id="spellingCount">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label"><span class="stat-dot blue"></span> Grammar issues</span>
+        <span class="stat-value" id="grammarCount">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label"><span class="stat-dot green"></span> Status</span>
+        <span class="stat-value" id="statusText" style="color: #10B981;">Checking...</span>
+      </div>
     </div>
-    <div class="stat-row">
-      <span class="stat-label"><span class="stat-dot blue"></span> Grammar issues</span>
-      <span class="stat-value" id="grammarCount">0</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label"><span class="stat-dot green"></span> Status</span>
-      <span class="stat-value" id="statusText" style="color: #10B981;">Checking...</span>
+
+    <div id="noIssues" class="no-issues">
+      <div class="check-icon">&#10003;</div>
+      <p>No issues found on this page!</p>
     </div>
   </div>
 
-  <div id="noIssues" class="no-issues" style="display: none;">
-    <div class="check-icon">&#10003;</div>
-    <p>No issues found on this page!</p>
-  </div>
-
-  <div class="divider"></div>
-
-  <div id="writingStats" class="writing-stats">
-    <div class="stat-row">
-      <span class="stat-label">Word count</span>
-      <span class="stat-value" id="wordCount">0</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">Character count</span>
-      <span class="stat-value" id="charCount">0</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">Sentence count</span>
-      <span class="stat-value" id="sentenceCount">0</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">Avg sentence length</span>
-      <span class="stat-value" id="avgSentenceLength">0</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">Reading level</span>
-      <span class="stat-value" id="readingLevel">—</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">Flesch-Kincaid grade</span>
-      <span class="stat-value" id="fleschGrade">—</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">Passive voice %</span>
-      <span class="stat-value" id="passiveVoicePercent">0%</span>
+  <!-- Stats Tab Content -->
+  <div id="statsContent" style="display: none;">
+    <div id="writingStats" class="writing-stats active">
+      <div class="stat-row">
+        <span class="stat-label">Word count</span>
+        <span class="stat-value" id="wordCount">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Character count</span>
+        <span class="stat-value" id="charCount">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Sentence count</span>
+        <span class="stat-value" id="sentenceCount">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Avg sentence length</span>
+        <span class="stat-value" id="avgSentenceLength">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Reading level</span>
+        <span class="stat-value" id="readingLevel">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Flesch-Kincaid grade</span>
+        <span class="stat-value" id="fleschGrade">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Passive voice %</span>
+        <span class="stat-value" id="passiveVoicePercent">0%</span>
+      </div>
     </div>
   </div>
 
@@ -229,9 +312,12 @@
   </div>
 
   <div class="footer">
-    <a href="https://github.com/grammar-spelling-buddy" target="_blank">GitHub</a>
-    &nbsp;&middot;&nbsp;
-    <a href="#" id="reportLink">Report a bug</a>
+    <div class="footer-links">
+      <a href="https://github.com/grammar-spelling-buddy" target="_blank">GitHub</a>
+      <span>&middot;</span>
+      <a href="#" id="reportLink">Report a bug</a>
+    </div>
+    <span class="footer-watermark">G v1.0.0</span>
   </div>
 
   <script src="popup.js"></script>

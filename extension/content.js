@@ -527,116 +527,162 @@
   }
 
   // ─── Rendering: ContentEditable ─────────────────────────
-  // ─── Contenteditable: Floating Underline Overlay ─────────
-  // Instead of modifying the editable DOM (which Gmail/Slack strip),
-  // we position tiny underline elements over each error word using
-  // Range.getBoundingClientRect(). Zero DOM disruption.
+  // ─── Contenteditable: Sibling Overlay Underlines ─────────
+  // Gmail/Slack strip injected spans, so we create a transparent overlay
+  // div as a SIBLING of the contenteditable (same stacking context).
+  // Uses Range.getClientRects() for pixel-perfect underline positioning.
 
-  const ceOverlayMap = new WeakMap(); // element → { container, observer }
+  const ceOverlayMap = new WeakMap(); // element → { overlay, ro }
 
   function getOrCreateCEOverlay(element) {
     if (ceOverlayMap.has(element)) return ceOverlayMap.get(element);
+    if (!element.parentElement) return null;
 
-    const container = document.createElement("div");
-    container.className = "gsb-ce-overlay";
-    container.style.cssText = "position:absolute;top:0;left:0;width:0;height:0;pointer-events:none;z-index:2147483640;";
-    document.body.appendChild(container);
+    const overlay = document.createElement("div");
+    overlay.className = "gsb-ce-overlay";
+    // Position overlay exactly on top of the contenteditable
+    overlay.style.cssText =
+      "position:absolute;pointer-events:none;z-index:2147483640;overflow:hidden;";
+    // Insert right after the contenteditable in its parent
+    if (element.nextSibling) {
+      element.parentElement.insertBefore(overlay, element.nextSibling);
+    } else {
+      element.parentElement.appendChild(overlay);
+    }
+
+    // Sync overlay position with element
+    function syncPosition() {
+      const r = element.getBoundingClientRect();
+      const pr = element.offsetParent
+        ? element.offsetParent.getBoundingClientRect()
+        : { left: 0, top: 0 };
+      overlay.style.left = (r.left - pr.left) + "px";
+      overlay.style.top = (r.top - pr.top) + "px";
+      overlay.style.width = r.width + "px";
+      overlay.style.height = r.height + "px";
+    }
+    syncPosition();
 
     // Re-render on scroll or resize
     const reposition = () => {
+      syncPosition();
       const issues = state.issueMap.get(element);
-      if (issues && issues.length > 0) renderCEUnderlines(element, issues);
+      if (issues && issues.length > 0) drawCEUnderlines(element, issues);
     };
     element.addEventListener("scroll", reposition, { passive: true });
     const ro = new ResizeObserver(reposition);
     ro.observe(element);
 
-    const entry = { container, ro, reposition };
+    const entry = { overlay, ro, reposition, syncPosition };
     ceOverlayMap.set(element, entry);
     return entry;
   }
 
-  function renderCEUnderlines(element, issues) {
-    const entry = getOrCreateCEOverlay(element);
-    if (!entry || !entry.container) return;
-    const container = entry.container;
-    container.innerHTML = "";
+  // Build a text-node map that accounts for block-element newlines
+  // (innerText inserts \n for <div>, <p>, <br> but text nodes don't)
+  function buildInnerTextNodeMap(element) {
+    const result = [];
+    let innerTextOffset = 0;
+
+    function walk(node, isFirst) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        result.push({ node, start: innerTextOffset, end: innerTextOffset + node.length });
+        innerTextOffset += node.length;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const tag = node.tagName;
+        // Block elements and <br> insert newlines in innerText
+        const isBlock = /^(DIV|P|BR|LI|H[1-6]|BLOCKQUOTE|PRE|TR)$/.test(tag);
+        if (isBlock && !isFirst && tag !== "BR") {
+          innerTextOffset += 1; // newline before block content
+        }
+        if (tag === "BR") {
+          innerTextOffset += 1;
+        } else {
+          let first = true;
+          for (let child = node.firstChild; child; child = child.nextSibling) {
+            walk(child, first);
+            first = false;
+          }
+        }
+      }
+    }
+    walk(element, true);
+    return result;
+  }
+
+  function drawCEUnderlines(element, issues) {
+    const entry = ceOverlayMap.get(element);
+    if (!entry || !entry.overlay) return;
+    const overlay = entry.overlay;
+    overlay.innerHTML = "";
 
     if (!issues || issues.length === 0) return;
 
-    // Walk text nodes to build a position→node map
-    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-    const textNodes = [];
-    let charOffset = 0;
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      textNodes.push({ node, start: charOffset, end: charOffset + node.length });
-      charOffset += node.length;
-    }
+    entry.syncPosition();
 
+    const textNodes = buildInnerTextNodeMap(element);
     const elRect = element.getBoundingClientRect();
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
 
     issues.forEach((issue) => {
-      // Find the text nodes that contain this issue's range
-      let startNode = null, startOffset = 0;
-      let endNode = null, endOffset = 0;
+      let startNode = null, startOff = 0;
+      let endNode = null, endOff = 0;
 
       for (const tn of textNodes) {
         if (!startNode && tn.end > issue.start) {
           startNode = tn.node;
-          startOffset = issue.start - tn.start;
+          startOff = issue.start - tn.start;
         }
         if (!endNode && tn.end >= issue.end) {
           endNode = tn.node;
-          endOffset = issue.end - tn.start;
+          endOff = issue.end - tn.start;
           break;
         }
       }
 
       if (!startNode || !endNode) return;
+      // Clamp offsets to actual node lengths
+      if (startOff > startNode.length) startOff = startNode.length;
+      if (endOff > endNode.length) endOff = endNode.length;
 
       try {
         const range = document.createRange();
-        range.setStart(startNode, startOffset);
-        range.setEnd(endNode, endOffset);
+        range.setStart(startNode, startOff);
+        range.setEnd(endNode, endOff);
 
-        // A word can span multiple lines (wrapping), so get all client rects
         const rects = range.getClientRects();
         for (let r = 0; r < rects.length; r++) {
           const rect = rects[r];
-          // Skip rects outside the element's visible area
+          // Skip rects outside the element
           if (rect.bottom < elRect.top || rect.top > elRect.bottom) continue;
           if (rect.right < elRect.left || rect.left > elRect.right) continue;
 
           const underline = document.createElement("div");
           underline.className = "gsb-ce-underline " + (issue.type === "grammar" ? "grammar" : "spelling");
+          // Position relative to overlay (which matches element position)
           underline.style.cssText =
             "position:absolute;" +
-            "left:" + (rect.left + scrollX) + "px;" +
-            "top:" + (rect.bottom + scrollY - 2) + "px;" +
+            "left:" + (rect.left - elRect.left) + "px;" +
+            "top:" + (rect.bottom - elRect.top - 2) + "px;" +
             "width:" + rect.width + "px;" +
             "height:3px;" +
             "pointer-events:auto;cursor:pointer;";
 
-          // Click to show tooltip
           underline.addEventListener("click", (e) => {
             e.stopPropagation();
             showTooltip(issue, rect, element);
           });
 
-          container.appendChild(underline);
+          overlay.appendChild(underline);
         }
       } catch (e) {
-        // Range errors can happen with dynamic DOMs
+        // Range errors with dynamic DOMs — skip silently
       }
     });
   }
 
   function renderContentEditableIssues(element, issues) {
     state.issueMap.set(element, issues);
-    renderCEUnderlines(element, issues);
+    drawCEUnderlines(element, issues);
   }
 
   // ─── Click Handler for Issues ───────────────────────────

@@ -245,11 +245,12 @@
   box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
 }
 
-/* ─── Contenteditable Floating Underlines ─────────────── */
-/* Positioned over error words without touching the editable DOM */
+/* ─── Contenteditable Sibling Overlay ─────────────────── */
+/* Positioned as sibling of contenteditable, same stacking context */
 .gsb-ce-overlay {
   pointer-events: none;
   z-index: 2147483640;
+  overflow: visible;
 }
 
 .gsb-ce-underline {

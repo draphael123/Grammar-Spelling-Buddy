@@ -53,10 +53,12 @@
     // Listen for storage changes (keeps state in sync with popup/settings)
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== "sync") return;
+      let needsRecheck = false;
+
       if (changes.gsbEnabled) {
         state.enabled = changes.gsbEnabled.newValue !== false;
         if (!state.enabled) {
-          document.querySelectorAll(".gsb-badge").forEach((b) => b.remove());
+          clearAllHighlights();
           removeTooltip();
         } else {
           scanForTextFields();
@@ -64,18 +66,31 @@
       }
       if (changes.gsbDisabledSites) {
         state.disabledSites = changes.gsbDisabledSites.newValue || [];
+        if (isDisabledSite()) {
+          clearAllHighlights();
+        } else {
+          needsRecheck = true;
+        }
       }
       if (changes.gsbIgnoredWords) {
         state.ignoredWords = changes.gsbIgnoredWords.newValue || [];
+        needsRecheck = true;
       }
       if (changes.gsbIntensity) {
         state.intensity = changes.gsbIntensity.newValue || "standard";
+        needsRecheck = true;
       }
       if (changes.gsbUnderlineStyle) {
         state.underlineStyle = changes.gsbUnderlineStyle.newValue || "wavy";
+        needsRecheck = true;
       }
       if (changes.gsbAutoFix) {
         state.autoFix = changes.gsbAutoFix.newValue === true;
+      }
+
+      // Re-check all tracked elements when settings change
+      if (needsRecheck && state.enabled && !isDisabledSite()) {
+        recheckAllElements();
       }
     });
   }
@@ -527,76 +542,59 @@
   }
 
   // ─── Rendering: ContentEditable ─────────────────────────
-  // ─── Contenteditable: Sibling Overlay Underlines ─────────
-  // Gmail/Slack strip injected spans, so we create a transparent overlay
-  // div as a SIBLING of the contenteditable (same stacking context).
-  // Uses Range.getClientRects() for pixel-perfect underline positioning.
+  // ─── Contenteditable: Fixed-Position Underlines ──────────
+  // Gmail/Slack strip injected DOM. Instead we draw underlines using
+  // position:fixed on document.body — immune to stacking contexts.
+  // Uses Range.getClientRects() for pixel-perfect positioning.
 
-  const ceOverlayMap = new WeakMap(); // element → { overlay, ro }
+  const ceOverlayMap = new WeakMap(); // element → { container, ro }
 
   function getOrCreateCEOverlay(element) {
     if (ceOverlayMap.has(element)) return ceOverlayMap.get(element);
-    if (!element.parentElement) return null;
 
-    const overlay = document.createElement("div");
-    overlay.className = "gsb-ce-overlay";
-    // Position overlay exactly on top of the contenteditable
-    overlay.style.cssText =
-      "position:absolute;pointer-events:none;z-index:2147483640;overflow:hidden;";
-    // Insert right after the contenteditable in its parent
-    if (element.nextSibling) {
-      element.parentElement.insertBefore(overlay, element.nextSibling);
-    } else {
-      element.parentElement.appendChild(overlay);
-    }
+    const container = document.createElement("div");
+    container.className = "gsb-ce-overlay";
+    container.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483646;";
+    document.body.appendChild(container);
 
-    // Sync overlay position with element
-    function syncPosition() {
-      const r = element.getBoundingClientRect();
-      const pr = element.offsetParent
-        ? element.offsetParent.getBoundingClientRect()
-        : { left: 0, top: 0 };
-      overlay.style.left = (r.left - pr.left) + "px";
-      overlay.style.top = (r.top - pr.top) + "px";
-      overlay.style.width = r.width + "px";
-      overlay.style.height = r.height + "px";
-    }
-    syncPosition();
-
-    // Re-render on scroll or resize
+    // Re-render on scroll/resize to reposition fixed underlines
     const reposition = () => {
-      syncPosition();
       const issues = state.issueMap.get(element);
-      if (issues && issues.length > 0) drawCEUnderlines(element, issues);
+      if (issues && issues.length > 0) {
+        drawCEUnderlines(element, issues);
+      } else {
+        container.innerHTML = "";
+      }
     };
     element.addEventListener("scroll", reposition, { passive: true });
+    // Also listen on window scroll (Gmail compose scrolls within page)
+    window.addEventListener("scroll", reposition, { passive: true });
     const ro = new ResizeObserver(reposition);
     ro.observe(element);
 
-    const entry = { overlay, ro, reposition, syncPosition };
+    const entry = { container, ro, reposition };
     ceOverlayMap.set(element, entry);
     return entry;
   }
 
-  // Build a text-node map that accounts for block-element newlines
+  // Build a text-node map accounting for block-element newlines
   // (innerText inserts \n for <div>, <p>, <br> but text nodes don't)
   function buildInnerTextNodeMap(element) {
     const result = [];
-    let innerTextOffset = 0;
+    let offset = 0;
 
     function walk(node, isFirst) {
       if (node.nodeType === Node.TEXT_NODE) {
-        result.push({ node, start: innerTextOffset, end: innerTextOffset + node.length });
-        innerTextOffset += node.length;
+        result.push({ node, start: offset, end: offset + node.length });
+        offset += node.length;
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         const tag = node.tagName;
-        // Block elements and <br> insert newlines in innerText
         const isBlock = /^(DIV|P|BR|LI|H[1-6]|BLOCKQUOTE|PRE|TR)$/.test(tag);
         if (isBlock && !isFirst && tag !== "BR") {
-          innerTextOffset += 1; // newline before block content
+          offset += 1; // newline before block content
         }
         if (tag === "BR") {
-          innerTextOffset += 1;
+          offset += 1;
         } else {
           let first = true;
           for (let child = node.firstChild; child; child = child.nextSibling) {
@@ -612,16 +610,17 @@
 
   function drawCEUnderlines(element, issues) {
     const entry = ceOverlayMap.get(element);
-    if (!entry || !entry.overlay) return;
-    const overlay = entry.overlay;
-    overlay.innerHTML = "";
+    if (!entry || !entry.container) return;
+    const container = entry.container;
+    container.innerHTML = "";
 
     if (!issues || issues.length === 0) return;
 
-    entry.syncPosition();
+    // Check element is still visible
+    const elRect = element.getBoundingClientRect();
+    if (elRect.width === 0 && elRect.height === 0) return;
 
     const textNodes = buildInnerTextNodeMap(element);
-    const elRect = element.getBoundingClientRect();
 
     issues.forEach((issue) => {
       let startNode = null, startOff = 0;
@@ -640,7 +639,6 @@
       }
 
       if (!startNode || !endNode) return;
-      // Clamp offsets to actual node lengths
       if (startOff > startNode.length) startOff = startNode.length;
       if (endOff > endNode.length) endOff = endNode.length;
 
@@ -649,20 +647,23 @@
         range.setStart(startNode, startOff);
         range.setEnd(endNode, endOff);
 
+        // getClientRects gives viewport-relative coordinates (perfect for fixed positioning)
         const rects = range.getClientRects();
         for (let r = 0; r < rects.length; r++) {
           const rect = rects[r];
-          // Skip rects outside the element
+          // Skip rects outside the visible element area
           if (rect.bottom < elRect.top || rect.top > elRect.bottom) continue;
           if (rect.right < elRect.left || rect.left > elRect.right) continue;
+          // Skip zero-size rects
+          if (rect.width < 1) continue;
 
           const underline = document.createElement("div");
           underline.className = "gsb-ce-underline " + (issue.type === "grammar" ? "grammar" : "spelling");
-          // Position relative to overlay (which matches element position)
+          // position:fixed uses viewport coordinates = getBoundingClientRect values directly
           underline.style.cssText =
-            "position:absolute;" +
-            "left:" + (rect.left - elRect.left) + "px;" +
-            "top:" + (rect.bottom - elRect.top - 2) + "px;" +
+            "position:fixed;" +
+            "left:" + rect.left + "px;" +
+            "top:" + (rect.bottom - 2) + "px;" +
             "width:" + rect.width + "px;" +
             "height:3px;" +
             "pointer-events:auto;cursor:pointer;";
@@ -672,17 +673,50 @@
             showTooltip(issue, rect, element);
           });
 
-          overlay.appendChild(underline);
+          container.appendChild(underline);
         }
       } catch (e) {
-        // Range errors with dynamic DOMs — skip silently
+        // Range errors with dynamic DOMs — skip
       }
     });
   }
 
+  // Clear all CE underlines (used when disabling extension)
+  function clearCEOverlays() {
+    // WeakMap doesn't support iteration, so clear by removing all overlay elements
+    document.querySelectorAll(".gsb-ce-overlay").forEach((el) => el.remove());
+  }
+
   function renderContentEditableIssues(element, issues) {
     state.issueMap.set(element, issues);
+    getOrCreateCEOverlay(element); // ensure overlay exists
     drawCEUnderlines(element, issues);
+  }
+
+  // ─── Highlight Cleanup & Re-check ──────────────────────
+
+  function clearAllHighlights() {
+    // Remove mirror overlays (textareas)
+    document.querySelectorAll(".gsb-mirror").forEach((m) => m.remove());
+    // Remove CE overlays (contenteditable)
+    clearCEOverlays();
+    // Remove badges
+    document.querySelectorAll(".gsb-badge").forEach((b) => b.remove());
+    // Remove tooltips
+    removeTooltip();
+    // Clear issue map
+    state.issueMap = new WeakMap();
+    // Notify badge
+    if (typeof chrome !== "undefined" && chrome.runtime) {
+      try {
+        chrome.runtime.sendMessage({ action: "GSB_ISSUE_COUNT", type: "GSB_ISSUE_COUNT", count: 0, issueCount: 0, spelling: 0, grammar: 0 });
+      } catch (e) {}
+    }
+  }
+
+  function recheckAllElements() {
+    // Re-scan and re-check all currently tracked elements
+    scanForTextFields();
   }
 
   // ─── Click Handler for Issues ───────────────────────────

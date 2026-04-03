@@ -245,11 +245,11 @@
   box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
 }
 
-/* ─── Contenteditable Sibling Overlay ─────────────────── */
-/* Positioned as sibling of contenteditable, same stacking context */
+/* ─── Contenteditable Fixed Overlay ───────────────────── */
+/* Fixed-position overlay on document.body — immune to stacking contexts */
 .gsb-ce-overlay {
   pointer-events: none;
-  z-index: 2147483640;
+  z-index: 2147483646;
   overflow: visible;
 }
 

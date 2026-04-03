@@ -1086,10 +1086,13 @@
     // Backdrop click to close
     backdrop.addEventListener("click", closeSidebar);
 
-    // Listen for issues-updated event from content.js
-    document.addEventListener("gsb-issues-updated", () => {
-      refreshSidebar();
-    });
+    // Listen for issues-updated event from content.js (guard against duplicates)
+    if (!window.__gsbSidebarListenerAttached) {
+      document.addEventListener("gsb-issues-updated", () => {
+        refreshSidebar();
+      });
+      window.__gsbSidebarListenerAttached = true;
+    }
 
     // Initial refresh
     refreshSidebar();

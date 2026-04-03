@@ -47,6 +47,7 @@
 
   // ─── BK-Tree for Fast Spell Checking ─────────────────
   let gsbBKTree = null;
+  let pendingRechecks = []; // Queue elements to re-check once tree is ready
 
   function isDisabledSite() {
     return state.disabledSites.some((s) => location.hostname.includes(s));
@@ -350,11 +351,11 @@
       mirror.scrollLeft = element.scrollLeft;
     });
 
-    // Re-sync styles on resize
+    // Re-sync styles on resize (store ref for cleanup)
     const ro = new ResizeObserver(() => syncMirrorStyles(element, mirror));
     ro.observe(element);
 
-    const entry = { container, mirror };
+    const entry = { container, mirror, resizeObserver: ro };
     mirrorMap.set(element, entry);
     return entry;
   }
@@ -464,7 +465,7 @@
 
       const cursorPos = element.selectionStart;
       const clickedIssue = issues.find(
-        (i) => cursorPos >= i.start && cursorPos <= i.end
+        (i) => cursorPos >= i.start && cursorPos < i.end
       );
 
       if (clickedIssue) {
@@ -492,7 +493,7 @@
       const cursorPos = preRange.toString().length;
 
       const clickedIssue = issues.find(
-        (i) => cursorPos >= i.start && cursorPos <= i.end
+        (i) => cursorPos >= i.start && cursorPos < i.end
       );
 
       if (clickedIssue) {
@@ -519,6 +520,11 @@
   }
 
   function runCheck(element) {
+    // If BK-tree isn't ready yet, queue for re-check later
+    if (!gsbBKTree && pendingRechecks.indexOf(element) === -1) {
+      pendingRechecks.push(element);
+    }
+
     let text = "";
 
     if (element.tagName === "TEXTAREA" || element.tagName === "INPUT") {
@@ -668,14 +674,21 @@
     scanForTextFields();
 
     // Build BK-tree asynchronously from dictionary (non-blocking)
-    if (typeof buildBKTree !== "undefined" && GSB_DICTIONARY) {
+    if (typeof buildBKTree !== "undefined" && typeof GSB_DICTIONARY !== "undefined") {
       buildBKTree(GSB_DICTIONARY, 5000).then((tree) => {
         gsbBKTree = tree;
         console.log(
           "%c✓ Spell-check tree ready (" + tree.size() + " words)",
           "color: #10B981; font-weight: bold; font-size: 11px;"
         );
+        // Re-check any elements that were checked before tree was ready
+        for (const el of pendingRechecks) {
+          try { runCheck(el); } catch (e) { /* element may be gone */ }
+        }
+        pendingRechecks = [];
       });
+    } else {
+      console.warn("Grammar & Spelling Buddy: dictionary or BK-tree builder not loaded");
     }
 
     // Show notification for Google Docs if needed

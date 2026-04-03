@@ -120,7 +120,7 @@
         0.39 * (wordCount / sentenceCount) +
         11.8 * (totalSyllables / wordCount) -
         15.59;
-      fleschKincaid = Math.max(0, fleschKincaid.toFixed(1));
+      fleschKincaid = Math.max(0, parseFloat(fleschKincaid.toFixed(1)));
     }
 
     // Readability label based on grade level

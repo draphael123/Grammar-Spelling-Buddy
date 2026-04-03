@@ -16,8 +16,8 @@ chrome.runtime.onInstalled.addListener((details) => {
       gsbDisabledSites: [],
     });
 
-    // Open welcome page (optional)
-    // chrome.tabs.create({ url: "welcome.html" });
+    // Open welcome page on fresh install
+    chrome.tabs.create({ url: "welcome.html" });
 
     console.log("Grammar & Spelling Buddy installed!");
   }

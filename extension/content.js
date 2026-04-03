@@ -45,7 +45,8 @@
     });
   }
 
-  // ─── Utility ────────────────────────────────────────────
+  // ─── BK-Tree for Fast Spell Checking ─────────────────
+  let gsbBKTree = null;
 
   function isDisabledSite() {
     return state.disabledSites.some((s) => location.hostname.includes(s));
@@ -73,44 +74,28 @@
     return true;
   }
 
-  function levenshtein(a, b) {
-    const m = a.length, n = b.length;
-    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-    for (let i = 0; i <= m; i++) dp[i][0] = i;
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        dp[i][j] = Math.min(
-          dp[i - 1][j] + 1,
-          dp[i][j - 1] + 1,
-          dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
-        );
-      }
-    }
-    return dp[m][n];
-  }
-
   function findClosestWord(word) {
     const lower = word.toLowerCase();
 
-    // Check known misspellings first
+    // Check known misspellings first (instant lookup)
     if (GSB_MISSPELLINGS[lower]) return GSB_MISSPELLINGS[lower];
 
-    // Simple Levenshtein-based suggestion (check against a small subset for perf)
-    let best = null;
-    let bestDist = Infinity;
+    // Use BK-tree for fast approximate matching
+    if (!gsbBKTree) return null;
 
-    // Only search words of similar length for performance
-    for (const dictWord of GSB_DICTIONARY) {
-      if (Math.abs(dictWord.length - lower.length) > 2) continue;
-      const dist = levenshtein(lower, dictWord);
-      if (dist < bestDist && dist <= 2) {
-        bestDist = dist;
-        best = dictWord;
+    const candidates = gsbBKTree.search(lower, 2);
+
+    if (candidates.length === 0) return null;
+
+    // Sort by distance (ascending), then by word length (shorter is better)
+    candidates.sort((a, b) => {
+      if (a.distance !== b.distance) {
+        return a.distance - b.distance;
       }
-    }
+      return a.word.length - b.word.length;
+    });
 
-    return best;
+    return candidates[0].word;
   }
 
   // ─── Spell Check ────────────────────────────────────────
@@ -580,6 +565,17 @@
 
     // Initial scan
     scanForTextFields();
+
+    // Build BK-tree asynchronously from dictionary (non-blocking)
+    if (typeof buildBKTree !== "undefined" && GSB_DICTIONARY) {
+      buildBKTree(GSB_DICTIONARY, 5000).then((tree) => {
+        gsbBKTree = tree;
+        console.log(
+          "%c✓ Spell-check tree ready (" + tree.size() + " words)",
+          "color: #10B981; font-weight: bold; font-size: 11px;"
+        );
+      });
+    }
 
     // Show notification for Google Docs if needed
     if (window.notifyIfGoogleDocs) {

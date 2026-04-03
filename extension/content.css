@@ -148,6 +148,49 @@
   color: #C4B5FD;
 }
 
+/* ─── Mirror Overlay (underlines in textareas) ─────────── */
+.gsb-mirror-container {
+  position: relative;
+  display: inline-block;
+}
+
+.gsb-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  color: transparent !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  z-index: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.gsb-mirror-container textarea {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+}
+
+.gsb-mirror mark.gsb-error-spelling {
+  color: transparent;
+  background-color: transparent;
+  border-bottom: 2px wavy #EF4444;
+  padding-bottom: 0;
+}
+
+.gsb-mirror mark.gsb-error-grammar {
+  color: transparent;
+  background-color: transparent;
+  border-bottom: 2px wavy #3B82F6;
+  padding-bottom: 0;
+}
+
 /* Badge counter on text fields */
 .gsb-badge {
   position: absolute;
@@ -164,10 +207,6 @@
   pointer-events: none;
   animation: gsb-fade-in 0.2s ease;
   box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
-}
-
-.gsb-badge.clean {
-  background: #10B981;
 }
 
 /* Highlight word inline (for contenteditable) */

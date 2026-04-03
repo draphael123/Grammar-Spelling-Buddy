@@ -124,8 +124,8 @@
       // Skip likely proper nouns (capitalized mid-sentence)
       if (isLikelyProperNoun(word, match.index, text)) continue;
 
-      // Skip ALL-CAPS words (likely acronyms)
-      if (word === word.toUpperCase() && word.length >= 2) continue;
+      // Skip short ALL-CAPS words (likely acronyms like FBI, HTML, CEO)
+      if (word === word.toUpperCase() && word.length <= 5) continue;
 
       // Skip words with numbers
       if (/\d/.test(word)) continue;
@@ -314,29 +314,130 @@
     scheduleCheck(element);
   }
 
-  // ─── Rendering: Textarea / Input ────────────────────────
-  // For textarea/input, we show a small badge and rely on click
-  // positioning to show tooltips near the cursor.
+  // ─── Rendering: Textarea / Input (Mirror Overlay) ───────
+  // Creates a styled mirror div behind the textarea that shows
+  // red underlines on misspelled/grammar-error words.
+
+  const mirrorMap = new WeakMap(); // element → { container, mirror }
+
+  function getOrCreateMirror(element) {
+    if (mirrorMap.has(element)) return mirrorMap.get(element);
+    if (!element.parentElement) return null;
+
+    // Skip single-line inputs (too small for overlay)
+    if (element.tagName === "INPUT") {
+      mirrorMap.set(element, null);
+      return null;
+    }
+
+    const container = document.createElement("div");
+    container.className = "gsb-mirror-container";
+
+    const mirror = document.createElement("div");
+    mirror.className = "gsb-mirror";
+    container.appendChild(mirror);
+
+    // Insert container before the textarea, then move textarea inside
+    element.parentElement.insertBefore(container, element);
+    container.appendChild(element);
+
+    // Copy textarea styles to mirror
+    syncMirrorStyles(element, mirror);
+
+    // Keep mirror scroll in sync
+    element.addEventListener("scroll", () => {
+      mirror.scrollTop = element.scrollTop;
+      mirror.scrollLeft = element.scrollLeft;
+    });
+
+    // Re-sync styles on resize
+    const ro = new ResizeObserver(() => syncMirrorStyles(element, mirror));
+    ro.observe(element);
+
+    const entry = { container, mirror };
+    mirrorMap.set(element, entry);
+    return entry;
+  }
+
+  function syncMirrorStyles(textarea, mirror) {
+    const cs = getComputedStyle(textarea);
+    const props = [
+      "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing",
+      "wordSpacing", "textIndent", "textTransform", "whiteSpace", "wordWrap",
+      "overflowWrap", "padding", "paddingTop", "paddingRight", "paddingBottom",
+      "paddingLeft", "borderWidth", "borderTopWidth", "borderRightWidth",
+      "borderBottomWidth", "borderLeftWidth", "boxSizing", "width",
+    ];
+    props.forEach((p) => { mirror.style[p] = cs[p]; });
+    mirror.style.height = cs.height;
+  }
+
+  function renderMirrorHighlights(element, issues) {
+    const entry = getOrCreateMirror(element);
+
+    // For inputs or elements we can't mirror, fall back to badge only
+    if (!entry) {
+      renderBadge(element, issues);
+      return;
+    }
+
+    const text = element.value || "";
+    const { mirror } = entry;
+
+    if (issues.length === 0) {
+      mirror.innerHTML = escapeHtml(text) + "\u200b";
+      // Remove badge if it exists
+      const badge = entry.container.querySelector(".gsb-badge");
+      if (badge) badge.remove();
+      return;
+    }
+
+    // Build highlighted HTML
+    let html = "";
+    let cursor = 0;
+    for (const issue of issues) {
+      // Text before the issue
+      html += escapeHtml(text.substring(cursor, issue.start));
+      // The error word with underline mark
+      const errWord = text.substring(issue.start, issue.end);
+      const cls = issue.type === "spelling" ? "gsb-error-spelling" : "gsb-error-grammar";
+      html += `<mark class="${cls}">${escapeHtml(errWord)}</mark>`;
+      cursor = issue.end;
+    }
+    // Remaining text
+    html += escapeHtml(text.substring(cursor));
+    // Extra space so layout matches (trailing newline fix)
+    mirror.innerHTML = html + "\u200b";
+    mirror.scrollTop = element.scrollTop;
+
+    // Also show badge count
+    renderBadge(element, issues);
+  }
 
   function renderBadge(element, issues) {
+    // Find the right parent (mirror container or original parent)
+    const container = mirrorMap.has(element) && mirrorMap.get(element)
+      ? mirrorMap.get(element).container
+      : element.parentElement;
+    if (!container) return;
+
     // Remove existing badge
-    const existing = element.parentElement?.querySelector(".gsb-badge");
+    const existing = container.querySelector(".gsb-badge");
     if (existing) existing.remove();
 
-    if (!element.parentElement) return;
+    if (issues.length === 0) return;
 
     // Make parent relative if it isn't already
-    const parentPos = getComputedStyle(element.parentElement).position;
+    const parentPos = getComputedStyle(container).position;
     if (parentPos === "static") {
-      element.parentElement.style.position = "relative";
+      container.style.position = "relative";
     }
 
     const badge = document.createElement("div");
-    badge.className = "gsb-badge" + (issues.length === 0 ? " clean" : "");
-    badge.textContent =
-      issues.length === 0 ? "✓" : `${issues.length} issue${issues.length > 1 ? "s" : ""}`;
+    badge.className = "gsb-badge";
+    badge.textContent = `${issues.length} issue${issues.length > 1 ? "s" : ""}`;
 
-    element.parentElement.appendChild(badge);
+    container.appendChild(badge);
   }
 
   // ─── Rendering: ContentEditable ─────────────────────────
@@ -428,16 +529,16 @@
 
     if (!text || text.trim().length < 3) {
       state.issueMap.set(element, []);
-      renderBadge(element, []);
+      renderMirrorHighlights(element, []);
       return;
     }
 
     const issues = fullCheck(text);
     state.issueMap.set(element, issues);
 
-    // Render badge for textarea/input
+    // Render underlines for textarea/input via mirror overlay
     if (element.tagName === "TEXTAREA" || element.tagName === "INPUT") {
-      renderBadge(element, issues);
+      renderMirrorHighlights(element, issues);
     } else {
       renderContentEditableIssues(element, issues);
     }

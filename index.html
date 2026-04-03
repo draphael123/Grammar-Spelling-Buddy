@@ -888,61 +888,67 @@
 
   <!-- FAQ TOGGLE SCRIPT -->
   <script>
-    // Typing animation for hero demo
-    const fullText = "Hi team, I wanted to gave everyone a quick update on the project. We've made signifcant progress this week and the results is looking very promising. I'll send the full report tommorrow morning.";
-    const errors = [
-      { word: 'gave', start: 31, end: 35, fix: 'give', type: 'grammar', label: 'verb tense' },
-      { word: 'signifcant', start: 90, end: 100, fix: 'significant', type: 'spelling' },
-      { word: 'is', start: 175, end: 177, fix: 'are', type: 'grammar', label: 'subject-verb agreement' },
-      { word: 'tommorrow', start: 232, end: 241, fix: 'tomorrow', type: 'spelling' }
+    // Hero demo — find errors by word match, not hardcoded offsets
+    const demoErrors = [
+      { find: 'gave', fix: 'give', type: 'grammar' },
+      { find: 'signifcant', fix: 'significant', type: 'spelling' },
+      { find: 'results is', fix: 'results are', type: 'grammar' },
+      { find: 'tommorrow', fix: 'tomorrow', type: 'spelling' }
     ];
 
     function initHeroDemo() {
       const body = document.getElementById('hero-demo-body');
-      const text = body.textContent.trim();
+      if (!body) return;
+      let text = body.textContent.trim();
 
-      // Build HTML with errors highlighted
-      let html = '';
-      let lastIndex = 0;
-
-      errors.forEach(error => {
-        html += text.substring(lastIndex, error.start);
-        const errorClass = error.type === 'grammar' ? 'error-grammar' : 'error-spelling';
-        html += `<span class="${errorClass}" data-fix="${error.fix}">${error.word}</span>`;
-        lastIndex = error.end;
+      // Replace each error word with a clickable span (work from end to start to preserve positions)
+      const matches = [];
+      demoErrors.forEach(err => {
+        const idx = text.indexOf(err.find);
+        if (idx !== -1) {
+          matches.push({ ...err, start: idx, end: idx + err.find.length });
+        }
       });
-      html += text.substring(lastIndex);
+      // Sort by position descending so replacements don't shift earlier offsets
+      matches.sort((a, b) => a.start - b.start);
+
+      let html = '';
+      let cursor = 0;
+      matches.forEach(m => {
+        html += escapeHTML(text.substring(cursor, m.start));
+        const cls = m.type === 'grammar' ? 'error-grammar' : 'error-spelling';
+        html += '<span class="' + cls + '" data-fix="' + m.fix + '">' + escapeHTML(m.find) + '</span>';
+        cursor = m.end;
+      });
+      html += escapeHTML(text.substring(cursor));
 
       body.innerHTML = html;
 
-      // Add click handlers to errors
+      // Click to fix
       body.querySelectorAll('[data-fix]').forEach(span => {
+        span.style.cursor = 'pointer';
         span.addEventListener('click', () => {
           if (span.classList.contains('fixed')) return;
           span.classList.add('fixed');
           span.textContent = span.dataset.fix;
-          updateHeroDemoStats();
+          updateHeroCounts();
         });
       });
 
-      updateHeroDemoStats();
+      updateHeroCounts();
     }
 
-    function updateHeroDemoStats() {
-      const remaining = document.querySelectorAll('#hero-demo-body [data-fix]:not(.fixed)');
-      const spellingLeft = document.querySelectorAll('#hero-demo-body .error-spelling:not(.fixed)').length;
-      const grammarLeft = document.querySelectorAll('#hero-demo-body .error-grammar:not(.fixed)').length;
-
-      document.getElementById('hero-spelling-count').textContent = spellingLeft;
-      document.getElementById('hero-grammar-count').textContent = grammarLeft;
+    function escapeHTML(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // Initialize hero demo when page loads
-    window.addEventListener('load', () => {
-      initHeroDemo();
-    });
+    function updateHeroCounts() {
+      const s = document.querySelectorAll('#hero-demo-body .error-spelling:not(.fixed)').length;
+      const g = document.querySelectorAll('#hero-demo-body .error-grammar:not(.fixed)').length;
+      document.getElementById('hero-spelling-count').textContent = s;
+      document.getElementById('hero-grammar-count').textContent = g;
+    }
 
-    // Fallback in case load event already fired
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initHeroDemo);
     } else {

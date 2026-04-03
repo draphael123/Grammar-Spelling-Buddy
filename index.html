@@ -237,7 +237,12 @@
 
     .try-it-body {
       padding: 28px 32px; font-size: 1.05rem; line-height: 1.9;
-      min-height: 120px;
+      min-height: 120px; outline: none; cursor: text;
+      position: relative;
+    }
+    .try-it-body:empty::before {
+      content: 'Start typing to see real-time spell and grammar checking...';
+      color: #94A3B8; pointer-events: none;
     }
 
     .try-it-body .error-spelling,
@@ -593,7 +598,7 @@
           <div class="try-it-dot green"></div>
           <span>Try it yourself</span>
         </div>
-        <div class="try-it-body" id="hero-demo-body">Hi team, I wanted to gave everyone a quick update on the project. We've made signifcant progress this week and the results is looking very promising. I'll send the full report tommorrow morning.</div>
+        <div class="try-it-body" id="hero-demo-body" contenteditable="true" spellcheck="false">Hi team, I wanted to gave everyone a quick update on the project. We've made signifcant progress this week and the results is looking very promising. I'll send the full report tommorrow morning.</div>
       </div>
       <div class="results-bar">
         <div class="result-item">
@@ -888,263 +893,144 @@
 
   <!-- FAQ TOGGLE SCRIPT -->
   <script>
-    // Hero demo — find errors by word match, not hardcoded offsets
-    const demoErrors = [
-      { find: 'gave', fix: 'give', type: 'grammar' },
-      { find: 'signifcant', fix: 'significant', type: 'spelling' },
-      { find: 'results is', fix: 'results are', type: 'grammar' },
-      { find: 'tommorrow', fix: 'tomorrow', type: 'spelling' }
+    // ─── Live Demo: Spell & Grammar Checker ─────────────────
+    const DEMO_DICT = new Set([
+      'a','about','above','after','again','against','all','also','am','an','and','any','are','as',
+      'at','be','because','been','before','being','below','between','both','but','by','can','could',
+      'did','do','does','doing','down','during','each','even','every','few','for','from','further',
+      'gave','get','give','go','going','good','got','great','had','has','have','having','he','her',
+      'here','hers','herself','him','himself','his','how','however','i','if','in','into','is','it',
+      'its','itself','just','know','last','leave','let','like','long','look','looking','made','make',
+      'many','may','me','might','more','most','much','must','my','myself','need','new','no','nor',
+      'not','now','of','off','on','once','only','or','other','our','ours','ourselves','out','over',
+      'own','part','people','project','progress','promising','quick','really','report','results',
+      'right','said','same','say','see','send','she','should','show','so','some','still','such',
+      'take','team','tell','than','that','the','their','theirs','them','themselves','then','there',
+      'these','they','think','this','those','through','time','to','today','together','tomorrow',
+      'too','try','under','until','up','update','upon','us','use','very','want','wanted','was','way',
+      'we','week','well','were','what','when','where','which','while','who','whom','why','will',
+      'with','work','working','works','world','would','write','writing','written','year','you',
+      'your','yours','yourself','yourselves','hi','hello','morning','full','been','being','able',
+      'achieve','believe','receive','separate','significant','definitely','occurred','accommodate',
+      'occasion','affect','effect','its','lose','loose','accept','except','advice',
+      'advise','already','always','never','often','enough','everything','everyone','anything',
+      'something','nothing','please','thank','thanks','sorry','sure','okay','fine','done',
+      'actually','probably','usually','especially','finally','recently','currently',
+      've','ll','re','don','doesn','didn','won','isn','aren','wasn','weren','hasn','haven','hadn',
+      'couldn','wouldn','shouldn','s','t','d','m'
+    ]);
+    const DEMO_MISSPELLINGS = {
+      'teh':'the','hte':'the','taht':'that','wiht':'with','adn':'and','fo':'of',
+      'nto':'not','jsut':'just','waht':'what','ahve':'have','thier':'their',
+      'recieve':'receive','beleive':'believe','occured':'occurred',
+      'definately':'definitely','seperate':'separate','untill':'until',
+      'becuase':'because','wich':'which','thsi':'this','signifcant':'significant',
+      'tommorrow':'tomorrow','accomodate':'accommodate','occassion':'occasion',
+      'concious':'conscious','goverment':'government','enviroment':'environment',
+      'neccessary':'necessary','writting':'writing','begining':'beginning',
+      'tommorow':'tomorrow','tomorow':'tomorrow','realy':'really','alot':'a lot',
+      'arguement':'argument','calender':'calendar','collegue':'colleague',
+      'commited':'committed','diferent':'different','disapear':'disappear',
+      'embarass':'embarrass','explaination':'explanation','foriegn':'foreign',
+      'gauruntee':'guarantee','immediatly':'immediately','independant':'independent',
+      'knowlege':'knowledge','mispell':'misspell','noticable':'noticeable',
+      'persistant':'persistent','prefered':'preferred','publically':'publicly',
+      'recomend':'recommend','refered':'referred','relevent':'relevant',
+      'succesful':'successful','suprise':'surprise','truely':'truly',
+      'unfortunatly':'unfortunately','wierd':'weird'
+    };
+    const DEMO_GRAMMAR = [
+      { pattern: /\b(\w+)\s+\1\b/gi, msg: function(m){return 'Double word: "'+m[1]+'"';}, fix: function(m){return m[1];}, type: 'grammar' },
+      { pattern: /\b(could|should|would|must)\s+of\b/gi, msg: function(m){return '"'+m[0]+'" \u2192 "'+m[1]+' have"';}, fix: function(m){return m[1]+' have';}, type: 'grammar' },
+      { pattern: /\b(they|we|you)\s+(is)\b/gi, msg: function(){return 'Use "are" here';}, fix: function(m){return m[1]+' are';}, type: 'grammar' },
+      { pattern: /\b(they|we|you)\s+(was)\b/gi, msg: function(){return 'Use "were" here';}, fix: function(m){return m[1]+' were';}, type: 'grammar' },
+      { pattern: /\b(he|she|it)\s+(are)\b/gi, msg: function(){return 'Use "is" here';}, fix: function(m){return m[1]+' is';}, type: 'grammar' },
+      { pattern: /\bresults\s+is\b/gi, msg: function(){return '"results" is plural \u2014 use "are"';}, fix: function(){return 'results are';}, type: 'grammar' },
+      { pattern: /\bwanted\s+to\s+gave\b/gi, msg: function(){return 'Use "give" after "to"';}, fix: function(){return 'wanted to give';}, type: 'grammar' },
+      { pattern: /\b(your)\s+(a|an|the|going|welcome|right|never|doing)\b/gi, msg: function(){return 'Did you mean "you\'re"?';}, fix: function(m){return "you're "+m[2];}, type: 'grammar' },
+      { pattern: /\b(its)\s+(a|an|the|going|been|not)\b/gi, msg: function(){return 'Did you mean "it\'s"?';}, fix: function(m){return "it's "+m[2];}, type: 'grammar' }
     ];
-
-    function initHeroDemo() {
-      const body = document.getElementById('hero-demo-body');
-      if (!body) return;
-      let text = body.textContent.trim();
-
-      // Replace each error word with a clickable span (work from end to start to preserve positions)
-      const matches = [];
-      demoErrors.forEach(err => {
-        const idx = text.indexOf(err.find);
-        if (idx !== -1) {
-          matches.push({ ...err, start: idx, end: idx + err.find.length });
+    function demoCheck(text) {
+      var issues = [];
+      var wordRx = /[a-zA-Z'\u2019]+/g, wm;
+      while ((wm = wordRx.exec(text)) !== null) {
+        var w = wm[0], low = w.toLowerCase();
+        if (w.length <= 2) continue;
+        if (w === w.toUpperCase() && w.length <= 5) continue;
+        if (DEMO_DICT.has(low)) continue;
+        var fix = DEMO_MISSPELLINGS[low] || null;
+        issues.push({ start: wm.index, end: wm.index + w.length, word: w, fix: fix, type: 'spelling',
+          msg: fix ? '"'+w+'" \u2192 "'+fix+'"' : '"'+w+'" may be misspelled' });
+      }
+      DEMO_GRAMMAR.forEach(function(rule) {
+        rule.pattern.lastIndex = 0;
+        var gm;
+        while ((gm = rule.pattern.exec(text)) !== null) {
+          issues.push({ start: gm.index, end: gm.index + gm[0].length, word: gm[0],
+            fix: rule.fix(gm), msg: rule.msg(gm), type: 'grammar' });
         }
       });
-      // Sort by position descending so replacements don't shift earlier offsets
-      matches.sort((a, b) => a.start - b.start);
-
-      let html = '';
-      let cursor = 0;
-      matches.forEach(m => {
-        html += escapeHTML(text.substring(cursor, m.start));
-        const cls = m.type === 'grammar' ? 'error-grammar' : 'error-spelling';
-        html += '<span class="' + cls + '" data-fix="' + m.fix + '">' + escapeHTML(m.find) + '</span>';
-        cursor = m.end;
+      issues.sort(function(a,b){ return a.start - b.start; });
+      var filtered = [], lastEnd = -1;
+      for (var k = 0; k < issues.length; k++) {
+        if (issues[k].start >= lastEnd) { filtered.push(issues[k]); lastEnd = issues[k].end; }
+      }
+      return filtered;
+    }
+    function escapeHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function renderDemoHighlights(el, issues) {
+      var text = el.innerText;
+      var sel = window.getSelection(), cursorOffset = 0;
+      if (sel.rangeCount) {
+        try { var r = sel.getRangeAt(0), pre = document.createRange(); pre.selectNodeContents(el); pre.setEnd(r.startContainer, r.startOffset); cursorOffset = pre.toString().length; } catch(e) {}
+      }
+      var html = '', cursor = 0;
+      issues.forEach(function(i) {
+        html += escapeHTML(text.substring(cursor, i.start));
+        var cls = i.type === 'spelling' ? 'error-spelling' : 'error-grammar';
+        var fixAttr = i.fix ? ' data-fix="'+escapeHTML(i.fix)+'"' : '';
+        html += '<span class="'+cls+'"'+fixAttr+' title="'+escapeHTML(i.msg)+'">'+escapeHTML(i.word)+'</span>';
+        cursor = i.end;
       });
       html += escapeHTML(text.substring(cursor));
-
-      body.innerHTML = html;
-
-      // Click to fix
-      body.querySelectorAll('[data-fix]').forEach(span => {
+      el.innerHTML = html;
+      try {
+        var newRange = document.createRange();
+        var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        var charCount = 0, node;
+        while ((node = walker.nextNode())) {
+          if (charCount + node.length >= cursorOffset) { newRange.setStart(node, cursorOffset - charCount); newRange.collapse(true); sel.removeAllRanges(); sel.addRange(newRange); break; }
+          charCount += node.length;
+        }
+      } catch(e) {}
+      el.querySelectorAll('[data-fix]').forEach(function(span) {
         span.style.cursor = 'pointer';
-        span.addEventListener('click', () => {
-          if (span.classList.contains('fixed')) return;
-          span.classList.add('fixed');
-          span.textContent = span.dataset.fix;
-          updateHeroCounts();
-        });
-      });
-
-      updateHeroCounts();
-    }
-
-    function escapeHTML(str) {
-      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    function updateHeroCounts() {
-      const s = document.querySelectorAll('#hero-demo-body .error-spelling:not(.fixed)').length;
-      const g = document.querySelectorAll('#hero-demo-body .error-grammar:not(.fixed)').length;
-      document.getElementById('hero-spelling-count').textContent = s;
-      document.getElementById('hero-grammar-count').textContent = g;
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initHeroDemo);
-    } else {
-      initHeroDemo();
-    }
-
-    // Simple spell checker and grammar checker
-    const commonWords = new Set([
-      'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are',
-      'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but',
-      'by', 'can', 'could', 'did', 'do', 'does', 'doing', 'down', 'during', 'each', 'few', 'for',
-      'from', 'further', 'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers', 'herself',
-      'him', 'himself', 'his', 'how', 'i', 'if', 'in', 'into', 'is', 'it', 'its', 'itself', 'just',
-      'me', 'might', 'more', 'most', 'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once',
-      'only', 'or', 'other', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', 'so', 'some',
-      'such', 'than', 'that', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there',
-      'these', 'they', 'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very',
-      'was', 'we', 'were', 'what', 'when', 'where', 'which', 'while', 'who', 'whom', 'why', 'will',
-      'with', 'you', 'your', 'yours', 'yourself', 'yourselves', 'hi', 'team', 'wanted', 'everyone',
-      'quick', 'update', 'project', 'made', 'progress', 'this', 'week', 'results', 'looking',
-      'promising', 'send', 'full', 'report', 'tomorrow', 'morning', 'we', 've', 'the',
-      'wrote', 'write', 'written', 'work', 'working', 'works', 'day', 'days', 'time', 'times',
-      'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'need', 'want', 'like',
-      'help', 'think', 'know', 'see', 'come', 'go', 'make', 'take', 'give', 'find', 'get', 'have',
-      'say', 'tell', 'ask', 'show', 'use', 'feel', 'try', 'look', 'call', 'meet', 'start', 'end',
-      'save', 'send', 'wait', 'leave', 'need', 'allow', 'avoid', 'receive', 'believe', 'achieve'
-    ]);
-
-    const misspellings = {
-      'signifcant': 'significant',
-      'tommorrow': 'tomorrow',
-      'recieve': 'receive',
-      'occured': 'occurred',
-      'wich': 'which',
-      'their': 'there', // common confusion
-      'untill': 'until',
-      'seperate': 'separate',
-      'accomodate': 'accommodate',
-      'occassion': 'occasion'
-    };
-
-    function checkText(text) {
-      const issues = [];
-      const words = text.match(/\w+/g) || [];
-      let charIndex = 0;
-
-      // Check for spelling errors
-      for (const word of words) {
-        const lower = word.toLowerCase();
-        if (misspellings[lower]) {
-          const index = text.indexOf(word, charIndex);
-          if (index !== -1) {
-            issues.push({
-              type: 'spelling',
-              word: word,
-              suggestion: misspellings[lower],
-              index: index,
-              length: word.length
-            });
-            charIndex = index + word.length;
-          }
-        }
-      }
-
-      // Check for common grammar patterns
-      const sentencePattern = /([A-Z][^.!?]*[.!?])/g;
-      let match;
-      while ((match = sentencePattern.exec(text)) !== null) {
-        const sentence = match[1];
-        
-        // Double words check
-        const doubleWords = /(\w+)\s+/gi;
-        let doubleMatch;
-        while ((doubleMatch = doubleWords.exec(sentence)) !== null) {
-          const startIdx = match.index + doubleMatch.index;
-          issues.push({
-            type: 'grammar',
-            word: doubleMatch[0],
-            suggestion: doubleMatch[1],
-            index: startIdx,
-            length: doubleMatch[0].length,
-            label: 'Double word'
-          });
-        }
-
-        // "could of" / "should of" check
-        if (/(could|should|would|must)\s+of/gi.test(sentence)) {
-          const ofMatch = /(could|should|would|must)\s+of/gi.exec(sentence);
-          if (ofMatch) {
-            const startIdx = match.index + ofMatch.index;
-            issues.push({
-              type: 'grammar',
-              word: ofMatch[0],
-              suggestion: ofMatch[1] + ' have',
-              index: startIdx,
-              length: ofMatch[0].length,
-              label: 'Grammar'
-            });
-          }
-        }
-
-        // Subject-verb agreement (simple check for "they is", "he are")
-        if (/(they|we|you)\s+(is|was)/gi.test(sentence)) {
-          const svMatch = /(they|we|you)\s+(is|was)/gi.exec(sentence);
-          if (svMatch) {
-            const startIdx = match.index + svMatch.index;
-            const correction = svMatch[2].toLowerCase() === 'is' ? 'are' : 'were';
-            issues.push({
-              type: 'grammar',
-              word: svMatch[0],
-              suggestion: svMatch[1] + ' ' + correction,
-              index: startIdx,
-              length: svMatch[0].length,
-              label: 'Subject-verb agreement'
-            });
-          }
-        }
-
-        if (/(he|she|it)\s+(are|were)/gi.test(sentence)) {
-          const svMatch = /(he|she|it)\s+(are|were)/gi.exec(sentence);
-          if (svMatch) {
-            const startIdx = match.index + svMatch.index;
-            const correction = svMatch[2].toLowerCase() === 'are' ? 'is' : 'was';
-            issues.push({
-              type: 'grammar',
-              word: svMatch[0],
-              suggestion: svMatch[1] + ' ' + correction,
-              index: startIdx,
-              length: svMatch[0].length,
-              label: 'Subject-verb agreement'
-            });
-          }
-        }
-      }
-
-      return issues.sort((a, b) => a.index - b.index);
-    }
-
-    function renderIssues(issues) {
-      const issuesList = document.getElementById('issues-list');
-      const spellingCount = issues.filter(i => i.type === 'spelling').length;
-      const grammarCount = issues.filter(i => i.type === 'grammar').length;
-
-      document.getElementById('spelling-count').textContent = spellingCount;
-      document.getElementById('grammar-count').textContent = grammarCount;
-
-      if (issues.length === 0) {
-        issuesList.innerHTML = '<div class="no-issues">No issues found</div>';
-        return;
-      }
-
-      issuesList.innerHTML = issues.map((issue, idx) => {
-        const isGrammar = issue.type === 'grammar';
-        return `
-          <div class="issue-card ${isGrammar ? 'grammar' : ''}">
-            <span><span class="issue-text">${isGrammar ? (issue.label || 'Grammar') : 'Spelling'}:</span> "<span class="issue-error">${issue.word}</span>" → "${issue.suggestion}"</span>
-            <button class="issue-fix-btn" data-index="${idx}">Fix</button>
-          </div>
-        `;
-      }).join('');
-
-      // Add fix button listeners
-      document.querySelectorAll('.issue-fix-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const idx = parseInt(e.target.dataset.index);
-          const issue = issues[idx];
-          const textarea = document.getElementById('try-it-textarea');
-          const before = textarea.value.substring(0, issue.index);
-          const after = textarea.value.substring(issue.index + issue.length);
-          textarea.value = before + issue.suggestion + after;
-          textarea.dispatchEvent(new Event('input'));
+        span.addEventListener('click', function(e) {
+          e.stopPropagation();
+          this.className = 'fixed';
+          this.textContent = this.dataset.fix;
+          this.removeAttribute('data-fix');
+          this.removeAttribute('title');
+          clearTimeout(demoTimer);
+          demoTimer = setTimeout(runDemoCheck, 200);
         });
       });
     }
-
-    // Keep old try-it textarea code in case it's used elsewhere
-    const tryItTextarea = document.getElementById('try-it-textarea');
-    if (tryItTextarea) {
-      let checkTimeout;
-      tryItTextarea.addEventListener('input', () => {
-        clearTimeout(checkTimeout);
-        checkTimeout = setTimeout(() => {
-          const text = tryItTextarea.value;
-          const issues = checkText(text);
-          renderIssues(issues);
-        }, 300);
-      });
-
-      // Initial check on load
-      window.addEventListener('load', () => {
-        const text = tryItTextarea.value;
-        const issues = checkText(text);
-        renderIssues(issues);
-      });
+    var demoTimer;
+    function runDemoCheck() {
+      var el = document.getElementById('hero-demo-body');
+      if (!el) return;
+      var issues = demoCheck(el.innerText);
+      renderDemoHighlights(el, issues);
+      document.getElementById('hero-spelling-count').textContent = issues.filter(function(i){return i.type==='spelling';}).length;
+      document.getElementById('hero-grammar-count').textContent = issues.filter(function(i){return i.type==='grammar';}).length;
     }
-
+    var heroBody = document.getElementById('hero-demo-body');
+    if (heroBody) {
+      heroBody.addEventListener('input', function() { clearTimeout(demoTimer); demoTimer = setTimeout(runDemoCheck, 400); });
+      if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', function(){ setTimeout(runDemoCheck, 100); }); }
+      else { setTimeout(runDemoCheck, 100); }
+    }
     document.querySelectorAll('.faq-question').forEach(btn => {
       btn.addEventListener('click', () => {
         const item = btn.parentElement;

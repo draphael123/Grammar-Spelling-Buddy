@@ -13,6 +13,10 @@
   const state = {
     enabled: true,
     disabledSites: [],
+    ignoredWords: [],
+    intensity: "standard", // "strict" | "standard" | "relaxed"
+    underlineStyle: "wavy", // "wavy" | "dotted" | "dashed"
+    autoFix: false,
     activeTooltip: null,
     debounceTimers: new WeakMap(),
     checkedElements: new WeakSet(),
@@ -20,14 +24,33 @@
     currentAdapter: null, // Active site adapter
   };
 
-  // Load disabled sites from storage
-  if (typeof chrome !== "undefined" && chrome.storage) {
-    chrome.storage.sync.get(["gsbEnabled", "gsbDisabledSites"], (data) => {
-      if (data.gsbEnabled === false) state.enabled = false;
-      if (data.gsbDisabledSites) state.disabledSites = data.gsbDisabledSites;
-    });
+  // Common auto-fix map (obvious typos → corrections)
+  const AUTO_FIX_MAP = {
+    teh: "the", hte: "the", taht: "that", wiht: "with", adn: "and",
+    thn: "the", fo: "of", ot: "to", si: "is", ti: "it", nto: "not",
+    jsut: "just", waht: "what", ahve: "have", htat: "that", thier: "their",
+    recieve: "receive", beleive: "believe", occured: "occurred",
+    definately: "definitely", seperate: "separate", untill: "until",
+    becuase: "because", wich: "which", thsi: "this", doesnt: "doesn't",
+    dont: "don't", cant: "can't", wont: "won't", didnt: "didn't",
+    youre: "you're", theyre: "they're", ive: "I've", im: "I'm",
+  };
 
-    // Listen for storage changes (keeps state in sync with popup/background)
+  // Load all settings from storage
+  if (typeof chrome !== "undefined" && chrome.storage) {
+    chrome.storage.sync.get(
+      ["gsbEnabled", "gsbDisabledSites", "gsbIgnoredWords", "gsbIntensity", "gsbUnderlineStyle", "gsbAutoFix"],
+      (data) => {
+        if (data.gsbEnabled === false) state.enabled = false;
+        if (data.gsbDisabledSites) state.disabledSites = data.gsbDisabledSites;
+        if (data.gsbIgnoredWords) state.ignoredWords = data.gsbIgnoredWords;
+        if (data.gsbIntensity) state.intensity = data.gsbIntensity;
+        if (data.gsbUnderlineStyle) state.underlineStyle = data.gsbUnderlineStyle;
+        if (data.gsbAutoFix === true) state.autoFix = true;
+      }
+    );
+
+    // Listen for storage changes (keeps state in sync with popup/settings)
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== "sync") return;
       if (changes.gsbEnabled) {
@@ -41,6 +64,18 @@
       }
       if (changes.gsbDisabledSites) {
         state.disabledSites = changes.gsbDisabledSites.newValue || [];
+      }
+      if (changes.gsbIgnoredWords) {
+        state.ignoredWords = changes.gsbIgnoredWords.newValue || [];
+      }
+      if (changes.gsbIntensity) {
+        state.intensity = changes.gsbIntensity.newValue || "standard";
+      }
+      if (changes.gsbUnderlineStyle) {
+        state.underlineStyle = changes.gsbUnderlineStyle.newValue || "wavy";
+      }
+      if (changes.gsbAutoFix) {
+        state.autoFix = changes.gsbAutoFix.newValue === true;
       }
     });
   }
@@ -113,6 +148,9 @@
       // Skip very short words (1-2 chars), numbers, etc.
       if (word.length <= 2) continue;
 
+      // Skip user-ignored words
+      if (state.ignoredWords.includes(lower)) continue;
+
       // Skip words with apostrophes that might be contractions
       if (word.includes("'") || word.includes("\u2019")) {
         const normalized = word.replace(/[\u2019']/g, "'").toLowerCase();
@@ -125,8 +163,12 @@
       // Skip likely proper nouns (capitalized mid-sentence)
       if (isLikelyProperNoun(word, match.index, text)) continue;
 
-      // Skip short ALL-CAPS words (likely acronyms like FBI, HTML, CEO)
-      if (word === word.toUpperCase() && word.length <= 5) continue;
+      // Skip ALL-CAPS words based on intensity
+      const capsMaxLen = state.intensity === "strict" ? 3 : state.intensity === "relaxed" ? 8 : 5;
+      if (word === word.toUpperCase() && word.length <= capsMaxLen) continue;
+
+      // In relaxed mode, skip single capitalized words (more lenient with names)
+      if (state.intensity === "relaxed" && word[0] === word[0].toUpperCase() && word.length >= 3) continue;
 
       // Skip words with numbers
       if (/\d/.test(word)) continue;
@@ -434,7 +476,8 @@
       // The error word with underline mark
       const errWord = text.substring(issue.start, issue.end);
       const cls = issue.type === "spelling" ? "gsb-error-spelling" : "gsb-error-grammar";
-      html += `<mark class="${cls}">${escapeHtml(errWord)}</mark>`;
+      const styleCls = "gsb-ul-" + state.underlineStyle;
+      html += `<mark class="${cls} ${styleCls}">${escapeHtml(errWord)}</mark>`;
       cursor = issue.end;
     }
     // Remaining text
@@ -566,6 +609,26 @@
       state.issueMap.set(element, []);
       renderMirrorHighlights(element, []);
       return;
+    }
+
+    // Auto-fix obvious typos before checking (if enabled)
+    if (state.autoFix && (element.tagName === "TEXTAREA" || element.tagName === "INPUT")) {
+      let fixed = text;
+      let changed = false;
+      for (const [typo, correction] of Object.entries(AUTO_FIX_MAP)) {
+        const regex = new RegExp("\\b" + typo + "\\b", "gi");
+        if (regex.test(fixed)) {
+          fixed = fixed.replace(regex, correction);
+          changed = true;
+        }
+      }
+      if (changed) {
+        const cursorPos = element.selectionStart;
+        const diff = fixed.length - text.length;
+        element.value = fixed;
+        element.selectionStart = element.selectionEnd = cursorPos + diff;
+        text = fixed;
+      }
     }
 
     const issues = fullCheck(text);

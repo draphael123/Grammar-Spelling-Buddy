@@ -162,18 +162,34 @@
   overflow-wrap: break-word;
 }
 
+/* Default underline (wavy) */
 .gsb-mirror mark.gsb-error-spelling {
   color: transparent;
   background-color: transparent;
   border-bottom: 2px wavy #EF4444;
   padding-bottom: 0;
 }
-
 .gsb-mirror mark.gsb-error-grammar {
   color: transparent;
   background-color: transparent;
   border-bottom: 2px wavy #3B82F6;
   padding-bottom: 0;
+}
+
+/* Dotted underline style */
+.gsb-mirror mark.gsb-ul-dotted.gsb-error-spelling {
+  border-bottom-style: dotted;
+}
+.gsb-mirror mark.gsb-ul-dotted.gsb-error-grammar {
+  border-bottom-style: dotted;
+}
+
+/* Dashed underline style */
+.gsb-mirror mark.gsb-ul-dashed.gsb-error-spelling {
+  border-bottom-style: dashed;
+}
+.gsb-mirror mark.gsb-ul-dashed.gsb-error-grammar {
+  border-bottom-style: dashed;
 }
 
 /* Badge counter on text fields */

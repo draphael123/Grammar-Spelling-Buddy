@@ -2,62 +2,125 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grammar & Spelling Buddy</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      width: 300px;
-      background: #FFFFFF;
-      color: #1E293B;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
 
+    body {
+      width: 320px;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: white;
+      color: #1E293B;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* Header */
     .header {
-      background: linear-gradient(135deg, #4F46E5, #7C3AED);
-      padding: 16px 18px;
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      padding: 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      gap: 12px;
     }
+
     .header-left {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
     }
+
     .header-icon {
-      width: 32px; height: 32px;
-      background: rgba(255,255,255,0.2);
+      width: 32px;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.2);
       border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 18px; font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
     }
-    .header h1 {
-      color: #fff; font-size: 14px; font-weight: 700;
+
+    .header-title {
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .header p {
-      color: rgba(255,255,255,0.7); font-size: 11px;
-    }
+
     .header-right {
       display: flex;
       align-items: center;
-      gap: 8px;
-    }
-    .header-version {
-      color: rgba(255,255,255,0.7); font-size: 10px; font-weight: 500;
+      gap: 12px;
+      flex-shrink: 0;
     }
 
-    /* Tab bar */
+    .version-label {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: rgba(255, 255, 255, 0.3);
+      border: none;
+      border-radius: 13px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      padding-left: 2px;
+    }
+
+    .toggle-switch.active {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .toggle-slider {
+      width: 22px;
+      height: 22px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .toggle-switch.active .toggle-slider {
+      transform: translateX(22px);
+    }
+
+    /* Tab Bar */
     .tab-bar {
       display: flex;
-      padding: 12px 18px;
       gap: 8px;
+      padding: 12px 16px;
+      background: white;
       border-bottom: 1px solid #E2E8F0;
     }
+
     .tab-button {
-      padding: 6px 14px;
+      flex: 1;
+      padding: 8px 12px;
       border: none;
       border-radius: 20px;
       font-size: 13px;
@@ -67,257 +130,602 @@
       color: #64748B;
       transition: all 0.2s ease;
     }
+
     .tab-button.active {
       background: #4F46E5;
-      color: #fff;
+      color: white;
     }
+
     .tab-button:hover:not(.active) {
       background: #E2E8F0;
     }
 
-    /* Toggle switch - larger for header */
-    .toggle {
-      position: relative;
-      width: 48px; height: 26px;
-    }
-    .toggle input { opacity: 0; width: 0; height: 0; }
-    .toggle .slider {
-      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(255,255,255,0.3); border-radius: 13px; cursor: pointer;
-      transition: background 0.2s;
-    }
-    .toggle .slider::before {
-      content: '';
-      position: absolute; top: 2px; left: 2px;
-      width: 22px; height: 22px; background: #fff;
-      border-radius: 50%; transition: transform 0.2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-    }
-    .toggle input:checked + .slider { background: rgba(255,255,255,0.5); }
-    .toggle input:checked + .slider::before { transform: translateX(22px); }
-
-    .stats {
-      padding: 16px 18px;
+    /* Tab Content */
+    .tab-content {
       display: none;
+      padding: 16px;
+      max-height: 400px;
+      overflow-y: auto;
     }
-    .stats.active {
+
+    .tab-content.active {
       display: block;
     }
-    .stat-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 8px 0;
-    }
-    .stat-row:not(:last-child) {
-      border-bottom: 1px solid #F1F5F9;
-    }
-    .stat-label {
-      font-size: 13px; color: #64748B;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .stat-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-    }
-    .stat-dot.red { background: #EF4444; }
-    .stat-dot.blue { background: #3B82F6; }
-    .stat-dot.green { background: #10B981; }
-    .stat-value {
-      font-size: 14px; font-weight: 700; color: #1E293B;
-      font-variant-numeric: tabular-nums;
+
+    /* Review Tab */
+    .issue-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    .site-info {
-      padding: 12px 18px;
-      border-top: 1px solid #E2E8F0;
-      font-size: 11px; color: #94A3B8;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .site-info .domain {
-      font-weight: 600; color: #64748B;
+    .issue-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: #F8FAFC;
+      border-radius: 8px;
+      border-left: 3px solid;
     }
 
-    .footer {
-      padding: 12px 18px;
-      border-top: 1px solid #E2E8F0;
-      text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 10px;
-      color: #94A3B8;
+    .issue-item.spelling {
+      border-left-color: #EF4444;
     }
-    .footer-links {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+
+    .issue-item.grammar {
+      border-left-color: #3B82F6;
     }
-    .footer a {
-      font-size: 11px; color: #4F46E5; text-decoration: none;
+
+    .issue-item.status {
+      border-left-color: #10B981;
+    }
+
+    .issue-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .issue-dot.spelling {
+      background: #EF4444;
+    }
+
+    .issue-dot.grammar {
+      background: #3B82F6;
+    }
+
+    .issue-dot.status {
+      background: #10B981;
+    }
+
+    .issue-label {
+      font-size: 13px;
       font-weight: 500;
-    }
-    .footer a:hover { text-decoration: underline; }
-    .footer-watermark {
-      font-size: 9px;
-      color: #CBD5E1;
-      letter-spacing: 0.5px;
+      flex: 1;
     }
 
-    .no-issues {
-      text-align: center; padding: 32px 18px;
-      display: none;
+    .issue-count {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1E293B;
     }
-    .no-issues.active {
-      display: block;
+
+    /* Celebration State */
+    .celebration-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 32px 16px;
+      text-align: center;
     }
-    .no-issues .check-icon {
-      width: 60px; height: 60px; border-radius: 50%;
-      background: #D1FAE5; color: #10B981;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 12px; font-size: 36px;
-      animation: scaleIn 0.4s ease-out;
+
+    .celebration-circle {
+      width: 60px;
+      height: 60px;
+      background: #10B981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      animation: scaleIn 0.5s ease-out;
     }
+
     @keyframes scaleIn {
-      from {
-        transform: scale(0.5);
+      0% {
+        transform: scale(0);
         opacity: 0;
       }
-      to {
+      100% {
         transform: scale(1);
         opacity: 1;
       }
     }
-    .no-issues p {
-      font-size: 14px; color: #64748B; font-weight: 500;
+
+    .celebration-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: #10B981;
     }
 
-    .divider {
-      height: 1px; background: #E2E8F0; margin: 12px 18px;
+    /* Insights Tab */
+    .stat-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    .writing-stats {
-      padding: 16px 18px;
-      display: none;
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: #F8FAFC;
+      border-radius: 8px;
     }
-    .writing-stats.active {
-      display: block;
+
+    .stat-label {
+      font-size: 13px;
+      color: #64748B;
+      font-weight: 500;
     }
-    .writing-stats .stat-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 8px 0;
+
+    .stat-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1E293B;
     }
-    .writing-stats .stat-row:not(:last-child) {
-      border-bottom: 1px solid #F1F5F9;
-    }
-    .writing-stats .stat-label {
-      font-size: 13px; color: #64748B;
-    }
-    .writing-stats .stat-value {
-      font-size: 14px; font-weight: 700; color: #1E293B;
-      font-variant-numeric: tabular-nums;
-    }
-    .readability-badge {
+
+    .badge {
       display: inline-block;
       padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 12px;
+      border-radius: 12px;
+      font-size: 11px;
       font-weight: 600;
-      color: #fff;
+      white-space: nowrap;
     }
-    .readability-badge.easy { background: #10B981; }
-    .readability-badge.standard { background: #3B82F6; }
-    .readability-badge.advanced { background: #F59E0B; }
-    .readability-badge.expert { background: #8B5CF6; }
+
+    .badge.easy {
+      background: #D1FAE5;
+      color: #065F46;
+    }
+
+    .badge.standard {
+      background: #DBEAFE;
+      color: #0C4A6E;
+    }
+
+    .badge.advanced {
+      background: #FED7AA;
+      color: #92400E;
+    }
+
+    .badge.expert {
+      background: #E9D5FF;
+      color: #6B21A8;
+    }
+
+    /* Settings Tab */
+    .settings-section {
+      margin-bottom: 20px;
+    }
+
+    .settings-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-header {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #64748B;
+      letter-spacing: 0.5px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #E2E8F0;
+      margin-bottom: 12px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 8px 0;
+    }
+
+    .setting-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #1E293B;
+    }
+
+    .setting-subtitle {
+      font-size: 12px;
+      color: #94A3B8;
+      margin-top: 2px;
+    }
+
+    select {
+      padding: 6px 10px;
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      background: #F8FAFC;
+      font-family: "Inter", sans-serif;
+      font-size: 13px;
+      color: #1E293B;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+
+    select:hover {
+      border-color: #CBD5E1;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #4F46E5;
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+    }
+
+    /* Toggle Switch (Settings variant) */
+    .toggle-switch-settings {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: #E2E8F0;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      padding-left: 2px;
+    }
+
+    .toggle-switch-settings.active {
+      background: #4F46E5;
+    }
+
+    .toggle-slider-settings {
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .toggle-switch-settings.active .toggle-slider-settings {
+      transform: translateX(20px);
+    }
+
+    /* Input and Add Button Row */
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      background: #F8FAFC;
+      font-family: "Inter", sans-serif;
+      font-size: 13px;
+      color: #1E293B;
+      transition: border-color 0.2s ease;
+    }
+
+    input[type="text"]::placeholder {
+      color: #CBD5E1;
+    }
+
+    input[type="text"]:hover {
+      border-color: #CBD5E1;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #4F46E5;
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+    }
+
+    .add-button {
+      padding: 6px 12px;
+      background: #4F46E5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-family: "Inter", sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .add-button:hover {
+      background: #4338CA;
+    }
+
+    /* Pill Tags */
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-height: 120px;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #F1F5F9;
+      color: #64748B;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .pill-remove {
+      background: none;
+      border: none;
+      color: #94A3B8;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      transition: color 0.2s ease;
+    }
+
+    .pill-remove:hover {
+      color: #64748B;
+    }
+
+    .empty-state {
+      font-size: 12px;
+      color: #94A3B8;
+      font-style: italic;
+      padding: 8px 0;
+    }
+
+    /* Footer */
+    .footer {
+      background: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      padding: 12px 16px;
+      font-size: 11px;
+      color: #64748B;
+    }
+
+    .footer-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      justify-content: center;
+    }
+
+    .footer-icon {
+      width: 14px;
+      height: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .footer-domain {
+      font-weight: 500;
+      color: #1E293B;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      border-top: 1px solid #E2E8F0;
+      padding-top: 10px;
+    }
+
+    .footer-link {
+      color: #4F46E5;
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .footer-link:hover {
+      color: #7C3AED;
+    }
+
+    .footer-watermark {
+      text-align: center;
+      color: #CBD5E1;
+      font-weight: 500;
+      padding-top: 8px;
+      border-top: 1px solid #E2E8F0;
+    }
   </style>
 </head>
 <body>
+  <!-- Header -->
   <div class="header">
     <div class="header-left">
       <div class="header-icon">G</div>
-      <div>
-        <h1>Grammar & Spelling Buddy</h1>
-      </div>
+      <div class="header-title">Grammar & Spelling Buddy</div>
     </div>
     <div class="header-right">
-      <span class="header-version">v1.0.0</span>
-      <label class="toggle">
-        <input type="checkbox" id="enableToggle" checked>
-        <span class="slider"></span>
-      </label>
+      <div class="version-label">v1.0.0</div>
+      <button class="toggle-switch" id="headerToggle">
+        <div class="toggle-slider"></div>
+      </button>
     </div>
   </div>
 
+  <!-- Tab Bar -->
   <div class="tab-bar">
-    <button class="tab-button active" id="issuesTab" data-tab="issues">Issues</button>
-    <button class="tab-button" id="statsTab" data-tab="stats">Stats</button>
+    <button class="tab-button active" data-tab="review">Review</button>
+    <button class="tab-button" data-tab="insights">Insights</button>
+    <button class="tab-button" data-tab="settings">Settings</button>
   </div>
 
-  <!-- Issues Tab Content -->
-  <div id="issuesContent">
-    <div id="statsArea" class="stats active">
-      <div class="stat-row">
-        <span class="stat-label"><span class="stat-dot red"></span> Spelling errors</span>
-        <span class="stat-value" id="spellingCount">0</span>
+  <!-- Review Tab -->
+  <div class="tab-content active" id="review-tab">
+    <div class="issue-list" id="issueList">
+      <div class="issue-item spelling">
+        <div class="issue-dot spelling"></div>
+        <div class="issue-label">Spelling Errors</div>
+        <div class="issue-count" id="spellingCount">0</div>
       </div>
-      <div class="stat-row">
-        <span class="stat-label"><span class="stat-dot blue"></span> Grammar issues</span>
-        <span class="stat-value" id="grammarCount">0</span>
+      <div class="issue-item grammar">
+        <div class="issue-dot grammar"></div>
+        <div class="issue-label">Grammar Issues</div>
+        <div class="issue-count" id="grammarCount">0</div>
       </div>
-      <div class="stat-row">
-        <span class="stat-label"><span class="stat-dot green"></span> Status</span>
-        <span class="stat-value" id="statusText" style="color: #10B981;">Checking...</span>
+      <div class="issue-item status">
+        <div class="issue-dot status"></div>
+        <div class="issue-label">Status</div>
+        <div class="issue-count" id="statusCount">0</div>
       </div>
     </div>
-
-    <div id="noIssues" class="no-issues">
-      <div class="check-icon">&#10003;</div>
-      <p>No issues found on this page!</p>
-    </div>
-  </div>
-
-  <!-- Stats Tab Content -->
-  <div id="statsContent" style="display: none;">
-    <div id="writingStats" class="writing-stats active">
-      <div class="stat-row">
-        <span class="stat-label">Word count</span>
-        <span class="stat-value" id="wordCount">0</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Character count</span>
-        <span class="stat-value" id="charCount">0</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Sentence count</span>
-        <span class="stat-value" id="sentenceCount">0</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Avg sentence length</span>
-        <span class="stat-value" id="avgSentenceLength">0</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Reading level</span>
-        <span class="stat-value" id="readingLevel">—</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Flesch-Kincaid grade</span>
-        <span class="stat-value" id="fleschGrade">—</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Passive voice %</span>
-        <span class="stat-value" id="passiveVoicePercent">0%</span>
-      </div>
+    <div class="celebration-container" id="celebrationContainer" style="display: none;">
+      <div class="celebration-circle">✓</div>
+      <div class="celebration-text">No issues found!</div>
     </div>
   </div>
 
-  <div class="site-info">
-    &#128274; All checks run locally — <span class="domain" id="siteDomain">this site</span>
+  <!-- Insights Tab -->
+  <div class="tab-content" id="insights-tab">
+    <div class="stat-grid">
+      <div class="stat-item">
+        <div class="stat-label">Word Count</div>
+        <div class="stat-value" id="wordCount">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Character Count</div>
+        <div class="stat-value" id="charCount">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Sentence Count</div>
+        <div class="stat-value" id="sentenceCount">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Avg Sentence Length</div>
+        <div class="stat-value" id="avgSentenceLength">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Reading Level</div>
+        <div class="stat-value">
+          <span class="badge standard" id="readingLevelBadge">Standard</span>
+        </div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Flesch-Kincaid Grade</div>
+        <div class="stat-value" id="fleschKincaid">0.0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Passive Voice</div>
+        <div class="stat-value" id="passiveVoice">0%</div>
+      </div>
+    </div>
   </div>
 
+  <!-- Settings Tab -->
+  <div class="tab-content" id="settings-tab">
+    <!-- Checking Intensity -->
+    <div class="settings-section">
+      <div class="section-header">Checking Intensity</div>
+      <div class="setting-row">
+        <div class="setting-label">Level</div>
+        <select id="checkingIntensity">
+          <option value="strict">Strict</option>
+          <option value="standard" selected>Standard</option>
+          <option value="relaxed">Relaxed</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Underline Style -->
+    <div class="settings-section">
+      <div class="section-header">Underline Style</div>
+      <div class="setting-row">
+        <div class="setting-label">Style</div>
+        <select id="underlineStyle">
+          <option value="wavy" selected>Wavy</option>
+          <option value="dotted">Dotted</option>
+          <option value="dashed">Dashed</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Auto-fix Common Typos -->
+    <div class="settings-section">
+      <div class="section-header">Auto-fix</div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Common Typos</div>
+          <div class="setting-subtitle">Silently correct obvious typos like teh → the</div>
+        </div>
+        <button class="toggle-switch-settings" id="autoFixToggle">
+          <div class="toggle-slider-settings"></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Ignored Words -->
+    <div class="settings-section">
+      <div class="section-header">Ignored Words</div>
+      <div class="setting-subtitle" style="margin-bottom: 10px;">Words that won't be flagged</div>
+      <div class="input-row">
+        <input type="text" id="ignoredWordInput" placeholder="Add a word...">
+        <button class="add-button" id="addIgnoredWordButton">Add</button>
+      </div>
+      <div class="pill-list" id="ignoredWordsList">
+        <div class="empty-state">No ignored words yet</div>
+      </div>
+    </div>
+
+    <!-- Disabled Sites -->
+    <div class="settings-section">
+      <div class="section-header">Disabled Sites</div>
+      <div class="setting-subtitle" style="margin-bottom: 10px;">Sites where checking is turned off</div>
+      <div class="input-row">
+        <input type="text" id="disabledSiteInput" placeholder="e.g. example.com">
+        <button class="add-button" id="addDisabledSiteButton">Add</button>
+      </div>
+      <div class="pill-list" id="disabledSitesList">
+        <div class="empty-state">No disabled sites</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
   <div class="footer">
-    <div class="footer-links">
-      <a href="https://github.com/grammar-spelling-buddy" target="_blank">GitHub</a>
-      <span>&middot;</span>
-      <a href="#" id="reportLink">Report a bug</a>
+    <div class="footer-top">
+      <div class="footer-icon">🔒</div>
+      <div>All checks run locally</div>
     </div>
-    <span class="footer-watermark">G v1.0.0</span>
+    <div class="footer-links">
+      <a href="#" class="footer-link">GitHub</a>
+      <a href="#" class="footer-link">Report a bug</a>
+    </div>
+    <div class="footer-watermark">G v1.0.0</div>
   </div>
 
   <script src="popup.js"></script>

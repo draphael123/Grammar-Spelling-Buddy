@@ -542,40 +542,35 @@
   }
 
   // ─── Rendering: ContentEditable ─────────────────────────
-  // ─── Contenteditable: Fixed-Position Underlines ──────────
-  // Gmail/Slack strip injected DOM. Instead we draw underlines using
-  // position:fixed on document.body — immune to stacking contexts.
-  // Uses Range.getClientRects() for pixel-perfect positioning.
+  // ─── CSS Custom Highlight API for Contenteditable ──────
+  // Uses the native CSS Custom Highlight API (Chrome 105+) to underline
+  // misspelled/grammar words directly through the browser's rendering engine.
+  // This works on Gmail, Slack, LinkedIn etc. where getClientRects() returns
+  // 0 rects and DOM overlays get stripped.
 
-  const ceOverlayMap = new WeakMap(); // element → { container, ro }
+  const highlightAPIAvailable = typeof Highlight !== "undefined" && typeof CSS !== "undefined" && CSS.highlights;
 
-  function getOrCreateCEOverlay(element) {
-    if (ceOverlayMap.has(element)) return ceOverlayMap.get(element);
-
-    const container = document.createElement("div");
-    container.className = "gsb-ce-overlay";
-    container.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483646;";
-    document.body.appendChild(container);
-
-    // Re-render on scroll/resize to reposition fixed underlines
-    const reposition = () => {
-      const issues = state.issueMap.get(element);
-      if (issues && issues.length > 0) {
-        drawCEUnderlines(element, issues);
-      } else {
-        container.innerHTML = "";
+  // Inject ::highlight() styles into the page
+  if (highlightAPIAvailable) {
+    const highlightStyle = document.createElement("style");
+    highlightStyle.textContent = `
+      ::highlight(gsb-spelling-errors) {
+        text-decoration: underline wavy #EF4444;
+        text-decoration-skip-ink: none;
+        text-underline-offset: 3px;
       }
-    };
-    element.addEventListener("scroll", reposition, { passive: true });
-    // Also listen on window scroll (Gmail compose scrolls within page)
-    window.addEventListener("scroll", reposition, { passive: true });
-    const ro = new ResizeObserver(reposition);
-    ro.observe(element);
-
-    const entry = { container, ro, reposition };
-    ceOverlayMap.set(element, entry);
-    return entry;
+      ::highlight(gsb-grammar-errors) {
+        text-decoration: underline wavy #3B82F6;
+        text-decoration-skip-ink: none;
+        text-underline-offset: 3px;
+      }
+    `;
+    document.head.appendChild(highlightStyle);
   }
+
+  // Track all active ranges so we can rebuild highlights globally
+  // Each entry: { element, ranges: [{ range, type }] }
+  const ceHighlightEntries = new Map();
 
   // Build a text-node map accounting for block-element newlines
   // (innerText inserts \n for <div>, <p>, <br> but text nodes don't)
@@ -609,18 +604,16 @@
   }
 
   function drawCEUnderlines(element, issues) {
-    const entry = ceOverlayMap.get(element);
-    if (!entry || !entry.container) return;
-    const container = entry.container;
-    container.innerHTML = "";
+    // Remove previous entries for this element
+    ceHighlightEntries.delete(element);
 
-    if (!issues || issues.length === 0) return;
-
-    // Check element is still visible
-    const elRect = element.getBoundingClientRect();
-    if (elRect.width === 0 && elRect.height === 0) return;
+    if (!issues || issues.length === 0) {
+      rebuildHighlights();
+      return;
+    }
 
     const textNodes = buildInnerTextNodeMap(element);
+    const rangeEntries = [];
 
     issues.forEach((issue) => {
       let startNode = null, startOff = 0;
@@ -646,50 +639,69 @@
         const range = document.createRange();
         range.setStart(startNode, startOff);
         range.setEnd(endNode, endOff);
-
-        // getClientRects gives viewport-relative coordinates (perfect for fixed positioning)
-        const rects = range.getClientRects();
-        for (let r = 0; r < rects.length; r++) {
-          const rect = rects[r];
-          // Skip rects outside the visible element area
-          if (rect.bottom < elRect.top || rect.top > elRect.bottom) continue;
-          if (rect.right < elRect.left || rect.left > elRect.right) continue;
-          // Skip zero-size rects
-          if (rect.width < 1) continue;
-
-          const underline = document.createElement("div");
-          underline.className = "gsb-ce-underline " + (issue.type === "grammar" ? "grammar" : "spelling");
-          // position:fixed uses viewport coordinates = getBoundingClientRect values directly
-          underline.style.cssText =
-            "position:fixed;" +
-            "left:" + rect.left + "px;" +
-            "top:" + (rect.bottom - 2) + "px;" +
-            "width:" + rect.width + "px;" +
-            "height:3px;" +
-            "pointer-events:auto;cursor:pointer;";
-
-          underline.addEventListener("click", (e) => {
-            e.stopPropagation();
-            showTooltip(issue, rect, element);
-          });
-
-          container.appendChild(underline);
-        }
+        rangeEntries.push({ range, type: issue.type });
       } catch (e) {
         // Range errors with dynamic DOMs — skip
       }
     });
+
+    if (rangeEntries.length > 0) {
+      ceHighlightEntries.set(element, rangeEntries);
+    }
+
+    rebuildHighlights();
+  }
+
+  // Rebuild the global CSS.highlights from all tracked elements
+  function rebuildHighlights() {
+    if (!highlightAPIAvailable) return;
+
+    const spellingRanges = [];
+    const grammarRanges = [];
+
+    ceHighlightEntries.forEach((entries) => {
+      entries.forEach(({ range, type }) => {
+        if (type === "grammar") {
+          grammarRanges.push(range);
+        } else {
+          spellingRanges.push(range);
+        }
+      });
+    });
+
+    try {
+      if (spellingRanges.length > 0) {
+        CSS.highlights.set("gsb-spelling-errors", new Highlight(...spellingRanges));
+      } else {
+        CSS.highlights.delete("gsb-spelling-errors");
+      }
+
+      if (grammarRanges.length > 0) {
+        CSS.highlights.set("gsb-grammar-errors", new Highlight(...grammarRanges));
+      } else {
+        CSS.highlights.delete("gsb-grammar-errors");
+      }
+    } catch (e) {
+      // Fallback: Highlight API may reject detached ranges
+      console.warn("GSB: Highlight API error:", e.message);
+    }
   }
 
   // Clear all CE underlines (used when disabling extension)
   function clearCEOverlays() {
-    // WeakMap doesn't support iteration, so clear by removing all overlay elements
+    ceHighlightEntries.clear();
+    if (highlightAPIAvailable) {
+      try {
+        CSS.highlights.delete("gsb-spelling-errors");
+        CSS.highlights.delete("gsb-grammar-errors");
+      } catch (e) {}
+    }
+    // Also remove legacy overlay elements if any remain
     document.querySelectorAll(".gsb-ce-overlay").forEach((el) => el.remove());
   }
 
   function renderContentEditableIssues(element, issues) {
     state.issueMap.set(element, issues);
-    getOrCreateCEOverlay(element); // ensure overlay exists
     drawCEUnderlines(element, issues);
   }
 

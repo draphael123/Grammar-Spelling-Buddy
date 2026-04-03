@@ -245,8 +245,22 @@
   box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
 }
 
-/* ─── Contenteditable Fixed Overlay ───────────────────── */
-/* Fixed-position overlay on document.body — immune to stacking contexts */
+/* ─── CSS Custom Highlight API (Chrome 105+) ─────────── */
+/* These styles are also injected dynamically in content.js  */
+/* for maximum compatibility, but defined here as well.      */
+::highlight(gsb-spelling-errors) {
+  text-decoration: underline wavy #EF4444;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+}
+
+::highlight(gsb-grammar-errors) {
+  text-decoration: underline wavy #3B82F6;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+}
+
+/* Legacy overlay classes (kept for backwards compatibility) */
 .gsb-ce-overlay {
   pointer-events: none;
   z-index: 2147483646;

@@ -8,16 +8,6 @@
 (function () {
   "use strict";
 
-  // ─── Adapter Registry ────────────────────────────────────────
-
-  const adapters = [
-    gmailAdapter,
-    googleDocsAdapter,
-    linkedinAdapter,
-    twitterAdapter,
-    slackAdapter,
-  ];
-
   // ─── Gmail Adapter ──────────────────────────────────────────
 
   const gmailAdapter = {
@@ -160,6 +150,16 @@
       return element.innerText || element.textContent || "";
     },
   };
+
+  // ─── Adapter Registry ────────────────────────────────────────
+
+  const adapters = [
+    gmailAdapter,
+    googleDocsAdapter,
+    linkedinAdapter,
+    twitterAdapter,
+    slackAdapter,
+  ];
 
   // ─── Adapter Selection ───────────────────────────────────────
 

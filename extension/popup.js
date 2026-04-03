@@ -18,36 +18,36 @@
     gsbDisabledSites: []
   };
 
-  // DOM references
+  // DOM references (matched to popup.html IDs)
   const dom = {
-    reviewTab: document.getElementById('reviewTab'),
-    insightsTab: document.getElementById('insightsTab'),
-    settingsTab: document.getElementById('settingsTab'),
-    reviewContent: document.getElementById('reviewContent'),
-    insightsContent: document.getElementById('insightsContent'),
-    settingsContent: document.getElementById('settingsContent'),
-    enableToggle: document.getElementById('enableToggle'),
-    statsArea: document.getElementById('statsArea'),
-    noIssues: document.getElementById('noIssues'),
+    reviewTab: document.querySelector('[data-tab="review"]'),
+    insightsTab: document.querySelector('[data-tab="insights"]'),
+    settingsTab: document.querySelector('[data-tab="settings"]'),
+    reviewContent: document.getElementById('review-tab'),
+    insightsContent: document.getElementById('insights-tab'),
+    settingsContent: document.getElementById('settings-tab'),
+    enableToggle: document.getElementById('headerToggle'),
+    statsArea: document.getElementById('issueList'),
+    noIssues: document.getElementById('celebrationContainer'),
     spellingCount: document.getElementById('spellingCount'),
     grammarCount: document.getElementById('grammarCount'),
-    statusText: document.getElementById('statusText'),
+    statusText: document.getElementById('statusCount'),
     wordCount: document.getElementById('wordCount'),
     charCount: document.getElementById('charCount'),
     sentenceCount: document.getElementById('sentenceCount'),
     avgSentenceLength: document.getElementById('avgSentenceLength'),
-    readingLevel: document.getElementById('readingLevel'),
-    fleschGrade: document.getElementById('fleschGrade'),
-    passiveVoicePercent: document.getElementById('passiveVoicePercent'),
-    intensitySelect: document.getElementById('intensitySelect'),
-    underlineSelect: document.getElementById('underlineSelect'),
+    readingLevel: document.getElementById('readingLevelBadge'),
+    fleschGrade: document.getElementById('fleschKincaid'),
+    passiveVoicePercent: document.getElementById('passiveVoice'),
+    intensitySelect: document.getElementById('checkingIntensity'),
+    underlineSelect: document.getElementById('underlineStyle'),
     autoFixToggle: document.getElementById('autoFixToggle'),
-    ignoreInput: document.getElementById('ignoreInput'),
-    ignoreAddBtn: document.getElementById('ignoreAddBtn'),
-    ignoreList: document.getElementById('ignoreList'),
-    disabledInput: document.getElementById('disabledInput'),
-    disabledAddBtn: document.getElementById('disabledAddBtn'),
-    disabledList: document.getElementById('disabledList'),
+    ignoreInput: document.getElementById('ignoredWordInput'),
+    ignoreAddBtn: document.getElementById('addIgnoredWordButton'),
+    ignoreList: document.getElementById('ignoredWordsList'),
+    disabledInput: document.getElementById('disabledSiteInput'),
+    disabledAddBtn: document.getElementById('addDisabledSiteButton'),
+    disabledList: document.getElementById('disabledSitesList'),
     siteDomain: document.getElementById('siteDomain')
   };
 
@@ -71,14 +71,14 @@
     document.querySelectorAll('[data-tab]').forEach(tab => {
       tab.classList.remove('active');
     });
-    document.querySelectorAll('[id*="Content"]').forEach(content => {
+    document.querySelectorAll('.tab-content').forEach(content => {
       content.style.display = 'none';
     });
 
     const tabElement = document.querySelector(`[data-tab="${tabName}"]`);
     if (tabElement) tabElement.classList.add('active');
 
-    const contentElement = document.getElementById(`${tabName}Content`);
+    const contentElement = document.getElementById(`${tabName}-tab`);
     if (contentElement) contentElement.style.display = 'block';
 
     if (tabName === TAB_INSIGHTS) {
@@ -93,7 +93,9 @@
   // ============================================================================
 
   function handleToggle() {
-    const enabled = dom.enableToggle.checked;
+    // Toggle is a <button> using .active class, not a checkbox
+    dom.enableToggle.classList.toggle('active');
+    const enabled = dom.enableToggle.classList.contains('active');
     saveSettings({ gsbEnabled: enabled }, () => {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs.length === 0) return;
@@ -135,15 +137,14 @@
 
   function updateReviewStats(total, spelling, grammar) {
     if (total === 0) {
-      dom.statsArea.style.display = 'none';
-      dom.noIssues.style.display = 'block';
-      dom.noIssues.classList.add('show-checkmark');
+      if (dom.statsArea) dom.statsArea.style.display = 'none';
+      if (dom.noIssues) { dom.noIssues.style.display = 'flex'; }
     } else {
-      dom.statsArea.style.display = 'block';
-      dom.noIssues.style.display = 'none';
-      dom.spellingCount.textContent = spelling;
-      dom.grammarCount.textContent = grammar;
-      dom.statusText.textContent = `Found ${total} issue${total !== 1 ? 's' : ''}`;
+      if (dom.statsArea) dom.statsArea.style.display = 'block';
+      if (dom.noIssues) dom.noIssues.style.display = 'none';
+      if (dom.spellingCount) dom.spellingCount.textContent = spelling;
+      if (dom.grammarCount) dom.grammarCount.textContent = grammar;
+      if (dom.statusText) dom.statusText.textContent = total;
     }
   }
 
@@ -275,7 +276,7 @@
       .map(word => `<span class="pill">${word}<button class="pill-remove" data-word="${word}">×</button></span>`)
       .join('');
 
-    document.querySelectorAll('.pill-remove').forEach(btn => {
+    dom.ignoreList.querySelectorAll('.pill-remove').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const word = e.target.dataset.word;
         loadSettings((settings) => {
@@ -297,7 +298,7 @@
       .map(site => `<span class="pill">${site}<button class="pill-remove" data-site="${site}">×</button></span>`)
       .join('');
 
-    document.querySelectorAll('.pill-remove').forEach(btn => {
+    dom.disabledList.querySelectorAll('.pill-remove').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const site = e.target.dataset.site;
         loadSettings((settings) => {
@@ -343,6 +344,7 @@
   // ============================================================================
 
   function displayCurrentDomain() {
+    if (!dom.siteDomain) return;
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs.length === 0) return;
       try {
@@ -364,8 +366,8 @@
     dom.insightsTab.addEventListener('click', () => switchTab(TAB_INSIGHTS));
     dom.settingsTab.addEventListener('click', () => switchTab(TAB_SETTINGS));
 
-    // Enable toggle
-    dom.enableToggle.addEventListener('change', handleToggle);
+    // Enable toggle (button, not checkbox)
+    dom.enableToggle.addEventListener('click', handleToggle);
 
     // Intensity, underline, auto-fix
     dom.intensitySelect.addEventListener('change', () => {
@@ -376,8 +378,11 @@
       saveSettings({ gsbUnderlineStyle: dom.underlineSelect.value });
     });
 
-    dom.autoFixToggle.addEventListener('change', () => {
-      saveSettings({ gsbAutoFix: dom.autoFixToggle.checked });
+    // Auto-fix toggle is also a <button> with .active class
+    dom.autoFixToggle.addEventListener('click', () => {
+      dom.autoFixToggle.classList.toggle('active');
+      const autoFixOn = dom.autoFixToggle.classList.contains('active');
+      saveSettings({ gsbAutoFix: autoFixOn });
     });
 
     // Ignored words
@@ -399,11 +404,13 @@
 
   function init() {
     loadSettings((settings) => {
-      // Populate controls
-      dom.enableToggle.checked = settings.gsbEnabled;
+      // Populate controls (toggles are buttons with .active class)
+      if (settings.gsbEnabled) dom.enableToggle.classList.add('active');
+      else dom.enableToggle.classList.remove('active');
       dom.intensitySelect.value = settings.gsbIntensity;
       dom.underlineSelect.value = settings.gsbUnderlineStyle;
-      dom.autoFixToggle.checked = settings.gsbAutoFix;
+      if (settings.gsbAutoFix) dom.autoFixToggle.classList.add('active');
+      else dom.autoFixToggle.classList.remove('active');
 
       // Render lists
       renderIgnoreList(settings.gsbIgnoredWords);

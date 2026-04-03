@@ -58,6 +58,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
         // Notify content script
         chrome.tabs.sendMessage(tab.id, {
+          action: "GSB_TOGGLE",
           type: "GSB_TOGGLE",
           enabled: !sites.includes(domain),
         });

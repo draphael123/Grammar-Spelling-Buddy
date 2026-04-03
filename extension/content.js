@@ -558,6 +558,7 @@
 
   function renderCEUnderlines(element, issues) {
     const entry = getOrCreateCEOverlay(element);
+    if (!entry || !entry.container) return;
     const container = entry.container;
     container.innerHTML = "";
 
@@ -891,10 +892,10 @@
           "color: #10B981; font-weight: bold; font-size: 11px;"
         );
         // Re-check any elements that were checked before tree was ready
-        for (const el of pendingRechecks) {
+        const pending = pendingRechecks.splice(0);
+        for (const el of pending) {
           try { runCheck(el); } catch (e) { /* element may be gone */ }
         }
-        pendingRechecks = [];
       });
     } else {
       console.warn("Grammar & Spelling Buddy: dictionary or BK-tree builder not loaded");
@@ -1003,8 +1004,8 @@
   };
 
   // Apply a fix to an element (called by sidebar)
-  window.__gsbApplyFix = function(element, issue) {
-    applyFix(element, issue);
+  window.__gsbApplyFix = function(element, issue, chosenSuggestion) {
+    applyFix(element, issue, chosenSuggestion || issue.suggestion);
   };
 
   // ─── Boot ───────────────────────────────────────────────

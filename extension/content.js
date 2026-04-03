@@ -110,28 +110,29 @@
     return true;
   }
 
-  function findClosestWord(word) {
+  function findSuggestions(word, maxResults = 5) {
     const lower = word.toLowerCase();
+    const results = [];
 
     // Check known misspellings first (instant lookup)
-    if (GSB_MISSPELLINGS[lower]) return GSB_MISSPELLINGS[lower];
+    if (GSB_MISSPELLINGS[lower]) {
+      results.push(GSB_MISSPELLINGS[lower]);
+    }
 
     // Use BK-tree for fast approximate matching
-    if (!gsbBKTree) return null;
-
-    const candidates = gsbBKTree.search(lower, 2);
-
-    if (candidates.length === 0) return null;
-
-    // Sort by distance (ascending), then by word length (shorter is better)
-    candidates.sort((a, b) => {
-      if (a.distance !== b.distance) {
-        return a.distance - b.distance;
+    if (gsbBKTree) {
+      const candidates = gsbBKTree.search(lower, 2);
+      candidates.sort((a, b) => {
+        if (a.distance !== b.distance) return a.distance - b.distance;
+        return a.word.length - b.word.length;
+      });
+      for (const c of candidates) {
+        if (!results.includes(c.word)) results.push(c.word);
+        if (results.length >= maxResults) break;
       }
-      return a.word.length - b.word.length;
-    });
+    }
 
-    return candidates[0].word;
+    return results;
   }
 
   // ─── Spell Check ────────────────────────────────────────
@@ -173,17 +174,18 @@
       // Skip words with numbers
       if (/\d/.test(word)) continue;
 
-      // It's a potential misspelling — find suggestion
-      const suggestion = findClosestWord(word);
+      // It's a potential misspelling — find suggestions
+      const suggestions = findSuggestions(word);
 
       issues.push({
         start: match.index,
         end: match.index + word.length,
         original: word,
-        message: suggestion
-          ? `"${word}" → Did you mean "${suggestion}"?`
+        message: suggestions.length
+          ? `"${word}" → Did you mean "${suggestions[0]}"?`
           : `"${word}" may be misspelled`,
-        suggestion: suggestion || null,
+        suggestion: suggestions.length ? suggestions[0] : null,
+        suggestions: suggestions,
         type: "spelling",
         ruleId: "spelling",
       });
@@ -226,16 +228,23 @@
     tip.setAttribute("role", "tooltip");
     tip.setAttribute("aria-live", "polite");
 
-    let buttonsHtml = `<div>`;
-    if (issue.suggestion) {
-      buttonsHtml += `<button class="gsb-tooltip-suggestion" data-action="fix">Apply: ${escapeHtml(issue.suggestion)}</button>`;
+    const suggestions = issue.suggestions && issue.suggestions.length ? issue.suggestions : (issue.suggestion ? [issue.suggestion] : []);
+
+    let suggestionsHtml = '';
+    if (suggestions.length > 0) {
+      suggestionsHtml = `<div class="gsb-suggestions-list">`;
+      suggestions.forEach((s, idx) => {
+        const isPrimary = idx === 0;
+        suggestionsHtml += `<button class="${isPrimary ? 'gsb-tooltip-suggestion' : 'gsb-tooltip-alt-suggestion'}" data-action="fix" data-fix="${escapeHtml(s)}">${escapeHtml(s)}</button>`;
+      });
+      suggestionsHtml += `</div>`;
     }
-    buttonsHtml += `<button class="gsb-dismiss" data-action="dismiss">Ignore</button></div>`;
 
     tip.innerHTML = `
       <div class="gsb-tooltip-type ${issue.type}">${issue.type}</div>
       <div class="gsb-tooltip-message">${escapeHtml(issue.message)}</div>
-      ${buttonsHtml}
+      ${suggestionsHtml}
+      <div class="gsb-tooltip-actions"><button class="gsb-dismiss" data-action="dismiss">Ignore</button></div>
     `;
 
     // Position above the word
@@ -260,9 +269,11 @@
 
     // Handle clicks
     tip.addEventListener("click", (e) => {
-      const action = e.target.dataset.action;
-      if (action === "fix" && issue.suggestion) {
-        applyFix(element, issue);
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === "fix" && btn.dataset.fix) {
+        applyFix(element, issue, btn.dataset.fix);
         removeTooltip();
       } else if (action === "dismiss") {
         removeTooltip();
@@ -285,7 +296,9 @@
 
   // ─── Apply Fix ──────────────────────────────────────────
 
-  function applyFix(element, issue) {
+  function applyFix(element, issue, chosenSuggestion) {
+    const fix = chosenSuggestion || issue.suggestion;
+    if (!fix) return;
     if (
       element.tagName === "TEXTAREA" ||
       element.tagName === "INPUT"
@@ -293,7 +306,7 @@
       const text = element.value;
       element.value =
         text.substring(0, issue.start) +
-        issue.suggestion +
+        fix +
         text.substring(issue.end);
 
       // Trigger input event so frameworks detect the change
@@ -331,7 +344,7 @@
           range.setStart(startNode, startOffset);
           range.setEnd(endNode, endOffset);
           range.deleteContents();
-          range.insertNode(document.createTextNode(issue.suggestion));
+          range.insertNode(document.createTextNode(fix));
 
           // Collapse cursor to end of inserted text
           sel.removeAllRanges();
@@ -347,7 +360,7 @@
         const text = element.innerText;
         element.innerText =
           text.substring(0, issue.start) +
-          issue.suggestion +
+          fix +
           text.substring(issue.end);
         element.dispatchEvent(new Event("input", { bubbles: true }));
       }

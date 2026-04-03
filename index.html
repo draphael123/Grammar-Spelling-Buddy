@@ -266,6 +266,86 @@
       cursor: default;
     }
 
+    /* Suggestion popup for demo */
+    .demo-suggestion-popup {
+      position: absolute;
+      z-index: 9999;
+      background: #1E293B;
+      color: #fff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      line-height: 1.4;
+      padding: 14px 18px;
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+      max-width: 340px;
+      animation: fadeUp 0.15s ease;
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .demo-popup-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 6px;
+      background: rgba(99, 102, 241, 0.2);
+      color: #A5B4FC;
+    }
+    .demo-popup-msg {
+      color: #CBD5E1;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+    .demo-popup-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .demo-popup-btn {
+      padding: 7px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid #475569;
+      background: #334155;
+      color: #E2E8F0;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .demo-popup-btn:hover {
+      background: #475569;
+      color: #fff;
+    }
+    .demo-popup-btn.primary {
+      background: #4F46E5;
+      color: #fff;
+      border: none;
+      font-weight: 600;
+    }
+    .demo-popup-btn.primary:hover {
+      background: #4338CA;
+    }
+    .demo-popup-ignore {
+      background: transparent;
+      color: #94A3B8;
+      border: 1px solid #475569;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .demo-popup-ignore:hover {
+      color: #fff;
+      border-color: #94A3B8;
+    }
+
     @keyframes typewriter {
       from { width: 0; }
       to { width: 100%; }
@@ -978,6 +1058,87 @@
       return filtered;
     }
     function escapeHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    // Generate similar words by single-char edits
+    function demoSimilarWords(word) {
+      var results = [], low = word.toLowerCase(), abc = 'abcdefghijklmnopqrstuvwxyz';
+      // substitutions
+      for (var i = 0; i < low.length; i++) {
+        for (var c = 0; c < 26; c++) {
+          var w = low.substring(0, i) + abc[c] + low.substring(i + 1);
+          if (w !== low && DEMO_DICT.has(w) && results.indexOf(w) === -1) results.push(w);
+        }
+      }
+      // deletions
+      for (var i = 0; i < low.length; i++) {
+        var w = low.substring(0, i) + low.substring(i + 1);
+        if (DEMO_DICT.has(w) && results.indexOf(w) === -1) results.push(w);
+      }
+      // insertions
+      for (var i = 0; i <= low.length; i++) {
+        for (var c = 0; c < 26; c++) {
+          var w = low.substring(0, i) + abc[c] + low.substring(i);
+          if (DEMO_DICT.has(w) && results.indexOf(w) === -1) results.push(w);
+        }
+      }
+      return results.slice(0, 4);
+    }
+
+    var activeDemoPopup = null;
+    function removeDemoPopup() { if (activeDemoPopup) { activeDemoPopup.remove(); activeDemoPopup = null; } }
+    document.addEventListener('click', function(e) {
+      if (activeDemoPopup && !activeDemoPopup.contains(e.target) && !e.target.classList.contains('error-spelling') && !e.target.classList.contains('error-grammar')) removeDemoPopup();
+    });
+
+    function showDemoPopup(span) {
+      removeDemoPopup();
+      var fix = span.dataset.fix;
+      var word = span.textContent;
+      var type = span.classList.contains('error-grammar') ? 'grammar' : 'spelling';
+      var suggestions = [];
+      if (fix) suggestions.push(fix);
+      if (type === 'spelling') {
+        var alts = demoSimilarWords(word);
+        alts.forEach(function(a) { if (suggestions.indexOf(a) === -1) suggestions.push(a); });
+      }
+      if (suggestions.length === 0) return;
+
+      var popup = document.createElement('div');
+      popup.className = 'demo-suggestion-popup';
+      popup.innerHTML = '<div class="demo-popup-label">' + (type === 'spelling' ? 'Spelling' : 'Grammar') + '</div>' +
+        '<div class="demo-popup-msg">' + escapeHTML(span.getAttribute('title') || '') + '</div>' +
+        '<div class="demo-popup-options">' +
+        suggestions.map(function(s, idx) {
+          return '<button class="demo-popup-btn' + (idx === 0 ? ' primary' : '') + '" data-fix="' + escapeHTML(s) + '">' + escapeHTML(s) + '</button>';
+        }).join('') +
+        '</div>' +
+        '<button class="demo-popup-ignore">Ignore</button>';
+
+      document.body.appendChild(popup);
+      activeDemoPopup = popup;
+
+      var rect = span.getBoundingClientRect();
+      popup.style.left = Math.max(8, rect.left) + 'px';
+      popup.style.top = (rect.top - popup.offsetHeight - 8 + window.scrollY) + 'px';
+      // flip below if off-screen
+      if (rect.top - popup.offsetHeight - 8 < window.scrollY) {
+        popup.style.top = (rect.bottom + 8 + window.scrollY) + 'px';
+      }
+
+      popup.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-fix]');
+        if (btn) {
+          span.className = 'fixed';
+          span.textContent = btn.dataset.fix;
+          span.removeAttribute('data-fix');
+          span.removeAttribute('title');
+          removeDemoPopup();
+          clearTimeout(demoTimer);
+          demoTimer = setTimeout(runDemoCheck, 200);
+        }
+        if (e.target.classList.contains('demo-popup-ignore')) removeDemoPopup();
+      });
+    }
+
     function renderDemoHighlights(el, issues) {
       var text = el.innerText;
       var sel = window.getSelection(), cursorOffset = 0;
@@ -1003,16 +1164,11 @@
           charCount += node.length;
         }
       } catch(e) {}
-      el.querySelectorAll('[data-fix]').forEach(function(span) {
+      el.querySelectorAll('.error-spelling, .error-grammar').forEach(function(span) {
         span.style.cursor = 'pointer';
         span.addEventListener('click', function(e) {
           e.stopPropagation();
-          this.className = 'fixed';
-          this.textContent = this.dataset.fix;
-          this.removeAttribute('data-fix');
-          this.removeAttribute('title');
-          clearTimeout(demoTimer);
-          demoTimer = setTimeout(runDemoCheck, 200);
+          showDemoPopup(this);
         });
       });
     }

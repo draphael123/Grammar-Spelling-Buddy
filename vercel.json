@@ -5,6 +5,13 @@
   "trailingSlash": false,
   "headers": [
     {
+      "source": "/downloads/(.*).zip",
+      "headers": [
+        { "key": "Content-Type", "value": "application/zip" },
+        { "key": "Content-Disposition", "value": "attachment" }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
@@ -12,5 +19,8 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
     }
+  ],
+  "rewrites": [
+    { "source": "/downloads/:path*", "destination": "/downloads/:path*" }
   ]
 }
